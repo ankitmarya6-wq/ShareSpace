@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShareSpace</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+min-height:100vh;
+font-family:Arial,sans-serif;
+background:
+radial-gradient(circle at top,#182442,#080b16 65%);
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+padding:20px;
+}
+
+.card{
+width:100%;
+max-width:620px;
+padding:38px 28px;
+border-radius:28px;
+background:rgba(25,31,52,.88);
+border:1px solid rgba(255,255,255,.12);
+box-shadow:0 25px 80px rgba(0,0,0,.45);
+text-align:center;
+}
+
+.logo{
+font-size:70px;
+margin-bottom:5px;
+}
+
+h1{
+font-size:52px;
+margin:0 0 10px;
+letter-spacing:-2px;
+}
+
+.subtitle{
+font-size:22px;
+color:#aeb9d5;
+margin-bottom:28px;
+}
+
+.notice{
+font-size:18px;
+line-height:1.6;
+color:#d9deeb;
+margin:20px auto 30px;
+max-width:520px;
+}
+
+button{
+border:0;
+border-radius:18px;
+padding:18px 28px;
+font-size:19px;
+font-weight:bold;
+cursor:pointer;
+background:white;
+color:#101522;
+}
+
+button:active{
+transform:scale(.97);
+}
+
+#stop{
+display:none;
+margin-top:14px;
+background:#ff5252;
+color:white;
+}
+
+.status{
+margin-top:24px;
+font-size:18px;
+color:#aeb9d5;
+}
+
+video{
+display:none;
+width:100%;
+margin-top:25px;
+border-radius:20px;
+}
+
+#preview{
+display:none;
+width:100%;
+margin-top:25px;
+border-radius:20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<div class="logo">🔗</div>
+
+<h1>ShareSpace</h1>
+
+<div class="subtitle">
+Camera & live location sharing
+</div>
+
+<div class="notice">
+By continuing, you agree that your camera photo and live location
+may be shared and stored.
+</div>
+
+<button id="allow">
+Allow & Continue
+</button>
+
+<button id="stop">
+Stop Sharing
+</button>
+
+<div class="status" id="status">
+Waiting for permission
+</div>
+
+<video id="video" autoplay playsinline></video>
+
+<img id="preview">
+
+</div>
+
+<script>
+const allow = document.getElementById("allow");
+const stop = document.getElementById("stop");
+const statusText = document.getElementById("status");
+const video = document.getElementById("video");
+const preview = document.getElementById("preview");
+
+let stream = null;
+let watchId = null;
+
+async function startSharing(){
+
+    try{
+
+        statusText.textContent = "Requesting camera permission...";
+
+        stream = await navigator.mediaDevices.getUserMedia({
+            video:true,
+            audio:false
+        });
+
+        video.srcObject = stream;
+        video.style.display = "block";
+
+        statusText.textContent =
+            "Camera allowed. Requesting location...";
+
+        if(!navigator.geolocation){
+            throw new Error("Geolocation is not supported");
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async position => {
+
+                statusText.textContent =
+                    "Camera & location sharing active";
+
+                await sendLocation(position);
+
+                capturePhoto();
+
+                watchId = navigator.geolocation.watchPosition(
+                    sendLocation,
+                    locationError,
+                    {
+                        enableHighAccuracy:true,
+                        maximumAge:5000,
+                        timeout:10000
+                    }
+                );
+
+                allow.style.display = "none";
+                stop.style.display = "inline-block";
+            },
+
+            locationError,
+            {
+                enableHighAccuracy:true,
+                timeout:10000
+            }
+        );
+
+    }catch(error){
+
+        console.error(error);
+
+        statusText.textContent =
+            "Permission was not granted. Please try again.";
+    }
+}
+
+
+async function sendLocation(position){
+
+    try{
+
+        await fetch("/api/location",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                latitude:position.coords.latitude,
+                longitude:position.coords.longitude,
+                accuracy:position.coords.accuracy
+            })
+        });
+
+    }catch(error){
+        console.error("Location upload failed",error);
+    }
+}
+
+
+function locationError(error){
+
+    console.error(error);
+
+    statusText.textContent =
+        "Location permission was not granted.";
+}
+
+
+function capturePhoto(){
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const photo = canvas.toDataURL("image/jpeg",0.85);
+
+    preview.src = photo;
+    preview.style.display = "block";
+
+    fetch("/api/photo",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            photo:photo
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+
+        if(result.ok){
+            statusText.textContent =
+                "Sharing active ✓ Photo and location saved";
+        }
+
+    })
+    .catch(error => {
+
+        console.error(error);
+
+        statusText.textContent =
+            "Sharing active, but photo upload failed.";
+    });
+}
+
+
+async function stopSharing(){
+
+    if(watchId !== null){
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+
+    if(stream){
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+
+    video.srcObject = null;
+    video.style.display = "none";
+
+    await fetch("/api/stop",{
+        method:"POST"
+    });
+
+    stop.style.display = "none";
+    allow.style.display = "inline-block";
+
+    statusText.textContent =
+        "Sharing stopped.";
+}
+
+
+allow.onclick = startSharing;
+stop.onclick = stopSharing;
+</script>
+
+</body>
+</html>

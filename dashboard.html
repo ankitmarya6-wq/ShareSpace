@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShareSpace Dashboard</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+min-height:100vh;
+font-family:Arial,sans-serif;
+background:
+radial-gradient(circle at top,#19172a,#080811 65%);
+color:white;
+padding:35px 18px;
+}
+
+.container{
+max-width:760px;
+margin:auto;
+}
+
+header{
+text-align:center;
+margin-bottom:35px;
+}
+
+.logo{
+font-size:65px;
+}
+
+h1{
+font-size:48px;
+margin:0 0 10px;
+}
+
+.sub{
+color:#aaaabd;
+font-size:19px;
+}
+
+.card{
+background:rgba(30,28,39,.9);
+border:1px solid rgba(255,255,255,.13);
+border-radius:28px;
+padding:32px;
+box-shadow:0 25px 70px rgba(0,0,0,.4);
+}
+
+.online{
+display:inline-block;
+padding:10px 18px;
+border-radius:30px;
+background:#063d2b;
+color:#21f39b;
+margin-bottom:25px;
+}
+
+h2{
+font-size:30px;
+}
+
+.info{
+font-size:18px;
+line-height:1.8;
+color:#d0ced8;
+}
+
+img{
+width:100%;
+max-height:600px;
+object-fit:contain;
+border-radius:20px;
+margin-top:20px;
+background:#080811;
+}
+
+.map{
+display:inline-block;
+margin-top:20px;
+padding:14px 20px;
+border-radius:14px;
+background:white;
+color:#111;
+font-weight:bold;
+text-decoration:none;
+}
+
+.back{
+display:inline-block;
+margin-top:30px;
+padding:16px 25px;
+border-radius:16px;
+background:white;
+color:#111;
+text-decoration:none;
+font-weight:bold;
+}
+
+.empty{
+text-align:center;
+padding:45px 10px;
+color:#aaa;
+font-size:20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+<div class="logo">🔐</div>
+<h1>ShareSpace</h1>
+<div class="sub">Consent-Based Sharing Dashboard</div>
+</header>
+
+<div class="card">
+
+<h2>Dashboard</h2>
+
+<div class="online">
+● Server Online
+</div>
+
+<div id="content">
+<div class="empty">
+Loading shared session...
+</div>
+</div>
+
+<a class="back" href="/">
+← Back to ShareSpace
+</a>
+
+</div>
+
+</div>
+
+<script>
+
+async function loadDashboard(){
+
+    const content = document.getElementById("content");
+
+    try{
+
+        const response = await fetch("/api/latest");
+
+        const data = await response.json();
+
+        if(!data.photo && !data.latitude){
+
+            content.innerHTML = `
+            <div class="empty">
+            No shared session available yet.
+            <br><br>
+            Ask the user to open ShareSpace and press
+            <b>Allow & Continue</b>.
+            </div>
+            `;
+
+            return;
+        }
+
+        let html = "";
+
+        if(data.photo){
+
+            html += `
+            <h2>Shared Photo</h2>
+            <img src="${data.photo}?t=${Date.now()}" alt="Shared photo">
+            `;
+        }
+
+        if(data.latitude && data.longitude){
+
+            const lat = Number(data.latitude).toFixed(6);
+            const lon = Number(data.longitude).toFixed(6);
+
+            html += `
+            <h2>Live Location</h2>
+
+            <div class="info">
+            Latitude: ${lat}<br>
+            Longitude: ${lon}<br>
+            Accuracy: ${data.accuracy ? Math.round(data.accuracy)+" meters" : "Unknown"}<br>
+            Updated: ${data.location_time || "Unknown"}
+            </div>
+
+            <a class="map"
+               target="_blank"
+               href="https://www.google.com/maps?q=${data.latitude},${data.longitude}">
+               📍 Open Location in Google Maps
+            </a>
+            `;
+        }
+
+        content.innerHTML = html;
+
+    }catch(error){
+
+        console.error(error);
+
+        content.innerHTML = `
+        <div class="empty">
+        Unable to load dashboard data.
+        </div>
+        `;
+    }
+}
+
+loadDashboard();
+
+setInterval(loadDashboard,5000);
+
+</script>
+
+</body>
+</html>

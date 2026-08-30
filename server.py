@@ -2,6 +2,7 @@ import os
 import json
 import base64
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 
@@ -100,7 +101,7 @@ class Handler(SimpleHTTPRequestHandler):
                 header, encoded = photo.split(",", 1)
                 image_data = base64.b64decode(encoded)
 
-                filename = "sharespace-photo.jpg"
+                filename = "sharespace-photo-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".jpg"
                 filepath = os.path.join(UPLOAD_DIR, filename)
 
                 with open(filepath, "wb") as f:

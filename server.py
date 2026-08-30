@@ -6,7 +6,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 
 HOST = "0.0.0.0"
-PORT = 8080
+PORT = int(os.environ.get("PORT", "8080"))
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -134,8 +134,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 print("=" * 40)
 print("ShareSpace is running")
-print("Website:   http://127.0.0.1:8080")
-print("Dashboard: http://127.0.0.1:8080/dashboard")
+print("Website:   http://0.0.0.0:8080")
+print("Dashboard: http://0.0.0.0:8080/dashboard")
 print("=" * 40)
 
 server = ThreadingHTTPServer((HOST, PORT), Handler)

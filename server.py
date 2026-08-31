@@ -3,37 +3,27 @@ import uuid
 from datetime import datetime, timezone
 
 import requests
-
-from flask import (
-    Flask,
-    request,
-    jsonify,
-    send_from_directory
-)
+from flask import Flask, request, jsonify, send_from_directory
 
 
 app = Flask(__name__)
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-# ==============================
+# ==========================================
 # SUPABASE SETTINGS
-# ==============================
+# ==========================================
 
 SUPABASE_URL = os.environ.get(
     "SUPABASE_URL",
     ""
 ).rstrip("/")
 
-
 SUPABASE_KEY = os.environ.get(
     "SUPABASE_SERVICE_ROLE_KEY",
     ""
 )
-
 
 SUPABASE_BUCKET = os.environ.get(
     "SUPABASE_BUCKET",
@@ -41,9 +31,9 @@ SUPABASE_BUCKET = os.environ.get(
 )
 
 
-# ==============================
+# ==========================================
 # DASHBOARD PASSWORD
-# ==============================
+# ==========================================
 
 ADMIN_PASSWORD = os.environ.get(
     "SHARESPACE_PASSWORD",
@@ -54,25 +44,22 @@ ADMIN_PASSWORD = os.environ.get(
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
-# ==============================
+# ==========================================
 # SUPABASE HEADERS
-# ==============================
+# ==========================================
 
 def sb_headers():
-
     return {
         "apikey": SUPABASE_KEY,
-        "Authorization":
-            f"Bearer {SUPABASE_KEY}"
+        "Authorization": f"Bearer {SUPABASE_KEY}"
     }
 
 
-# ==============================
-# CHECK SUPABASE
-# ==============================
+# ==========================================
+# SUPABASE CHECK
+# ==========================================
 
 def require_supabase():
-
     if not SUPABASE_URL:
         return False, (
             "SUPABASE_URL is missing.",
@@ -88,23 +75,19 @@ def require_supabase():
     return True, None
 
 
-# ==============================
-# TIME
-# ==============================
+# ==========================================
+# CURRENT UTC TIME
+# ==========================================
 
 def now_utc():
-
-    return datetime.now(
-        timezone.utc
-    ).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
-# ==============================
+# ==========================================
 # SHARE ID VALIDATION
-# ==============================
+# ==========================================
 
 def valid_share_id(value):
-
     if not value:
         return False
 
@@ -117,34 +100,27 @@ def valid_share_id(value):
     )
 
 
-# ==============================
-# HOME
-# ==============================
+# ==========================================
+# HOME PAGE
+# ==========================================
 
 @app.get("/")
 def home():
-
     return send_from_directory(
         BASE_DIR,
         "index.html"
     )
 
 
-# ==============================
+# ==========================================
 # SHARE PAGE
-# ==============================
+# ==========================================
 
 @app.get("/share/<share_id>")
 def share_page(share_id):
 
-    if not valid_share_id(
-        share_id
-    ):
-
-        return (
-            "Invalid share ID",
-            400
-        )
+    if not valid_share_id(share_id):
+        return "Invalid share ID", 400
 
     return send_from_directory(
         BASE_DIR,
@@ -152,35 +128,33 @@ def share_page(share_id):
     )
 
 
-# ==============================
+# ==========================================
 # DASHBOARD PAGE
-# ==============================
+# ==========================================
 
 @app.get("/dashboard")
 def dashboard():
-
     return send_from_directory(
         BASE_DIR,
         "dashboard.html"
     )
 
 
-# ==============================
-# HEALTH
-# ==============================
+# ==========================================
+# HEALTH CHECK
+# ==========================================
 
 @app.get("/api/health")
 def health():
-
     return jsonify(
         ok=True,
         service="ShareSpace"
     )
 
 
-# ==============================
+# ==========================================
 # SAVE PHOTO + LOCATION
-# ==============================
+# ==========================================
 
 @app.post("/api/share/<share_id>")
 def save_share(share_id):
@@ -188,51 +162,42 @@ def save_share(share_id):
     ok, error = require_supabase()
 
     if not ok:
-
         return jsonify(
             ok=False,
             error=error[0]
         ), error[1]
 
-
-    if not valid_share_id(
-        share_id
-    ):
-
+    if not valid_share_id(share_id):
         return jsonify(
             ok=False,
             error="Invalid share ID"
         ), 400
 
+    # --------------------------------------
+    # PHOTO
+    # --------------------------------------
 
-    photo =
-        request.files.get("photo")
-
+    photo = request.files.get("photo")
 
     if not photo:
-
         return jsonify(
             ok=False,
             error="Photo missing"
         ), 400
 
-
     if not (
         photo.mimetype or ""
     ).startswith("image/"):
-
         return jsonify(
             ok=False,
             error="Invalid image"
         ), 400
 
-
-    # ==========================
+    # --------------------------------------
     # LOCATION
-    # ==========================
+    # --------------------------------------
 
     try:
-
         latitude = float(
             request.form["latitude"]
         )
@@ -253,88 +218,66 @@ def save_share(share_id):
         TypeError,
         ValueError
     ):
-
         return jsonify(
             ok=False,
             error="Location missing or invalid"
         ), 400
-
 
     if not (
         -90 <= latitude <= 90
         and
         -180 <= longitude <= 180
     ):
-
         return jsonify(
             ok=False,
             error="Invalid coordinates"
         ), 400
 
-
-    # ==========================
+    # --------------------------------------
     # READ PHOTO
-    # ==========================
+    # --------------------------------------
 
     image_data = photo.read()
 
-
     if not image_data:
-
         return jsonify(
             ok=False,
             error="Empty photo"
         ), 400
 
-
     if len(image_data) > MAX_IMAGE_BYTES:
-
         return jsonify(
             ok=False,
             error="Photo is too large"
         ), 413
 
+    # --------------------------------------
+    # IMAGE EXTENSION
+    # --------------------------------------
 
-    # ==========================
-    # EXTENSION
-    # ==========================
-
-    mime = (
-        photo.mimetype
-        or
-        "image/jpeg"
-    )
-
+    mime = photo.mimetype or "image/jpeg"
 
     ext = ".jpg"
 
-
     if mime == "image/png":
-
         ext = ".png"
 
     elif mime == "image/webp":
-
         ext = ".webp"
-
 
     path = (
         "photos/"
-        +
-        uuid.uuid4().hex
-        +
-        ext
+        + uuid.uuid4().hex
+        + ext
     )
 
-
-    # ==========================
-    # UPLOAD TO SUPABASE
-    # ==========================
+    # --------------------------------------
+    # UPLOAD PHOTO TO SUPABASE STORAGE
+    # --------------------------------------
 
     try:
 
         upload = requests.post(
-
             f"{SUPABASE_URL}"
             f"/storage/v1/object/"
             f"{SUPABASE_BUCKET}/"
@@ -351,58 +294,32 @@ def save_share(share_id):
             timeout=60
         )
 
-
-        if upload.status_code not in (
-            200,
-            201
-        ):
+        if upload.status_code not in (200, 201):
 
             return jsonify(
                 ok=False,
                 error="Photo upload failed",
-                details=
-                    upload.text[:500]
+                details=upload.text[:500]
             ), 502
 
-
-        # ======================
-        # SAVE DATABASE RECORD
-        # ======================
+        # ----------------------------------
+        # DATABASE RECORD
+        # ----------------------------------
 
         timestamp = now_utc()
 
-
         row = {
-
-            "share_id":
-                share_id,
-
-            "photo_path":
-                path,
-
-            "latitude":
-                latitude,
-
-            "longitude":
-                longitude,
-
-            "accuracy":
-                accuracy,
-
-            "active":
-                True,
-
-            "created_at":
-                timestamp,
-
-            "updated_at":
-                timestamp
-
+            "share_id": share_id,
+            "photo_path": path,
+            "latitude": latitude,
+            "longitude": longitude,
+            "accuracy": accuracy,
+            "active": True,
+            "created_at": timestamp,
+            "updated_at": timestamp
         }
 
-
         db = requests.post(
-
             f"{SUPABASE_URL}"
             "/rest/v1/"
             "sharespace_shares"
@@ -410,12 +327,11 @@ def save_share(share_id):
 
             headers={
                 **sb_headers(),
-                "Content-Type":
-                    "application/json",
-
-                "Prefer":
+                "Content-Type": "application/json",
+                "Prefer": (
                     "resolution=merge-duplicates,"
                     "return=minimal"
+                )
             },
 
             json=row,
@@ -423,18 +339,11 @@ def save_share(share_id):
             timeout=20
         )
 
+        if db.status_code not in (200, 201, 204):
 
-        if db.status_code not in (
-            200,
-            201,
-            204
-        ):
-
-            # Cleanup uploaded photo
+            # Delete uploaded image if DB save failed
             try:
-
                 requests.delete(
-
                     f"{SUPABASE_URL}"
                     f"/storage/v1/object/"
                     f"{SUPABASE_BUCKET}/"
@@ -444,10 +353,8 @@ def save_share(share_id):
 
                     timeout=20
                 )
-
             except Exception:
                 pass
-
 
             return jsonify(
                 ok=False,
@@ -455,49 +362,46 @@ def save_share(share_id):
                 details=db.text[:500]
             ), 502
 
-
         return jsonify(
             ok=True,
-            message=
-                "Photo and location saved"
+            message="Photo and location saved"
         )
-
 
     except requests.RequestException as exc:
 
         return jsonify(
             ok=False,
-            error=
-                "Supabase connection failed",
+            error="Supabase connection failed",
             details=str(exc)
         ), 502
 
 
-# ==============================
+# ==========================================
 # LIVE LOCATION UPDATE
-# ==============================
+# ==========================================
 
 @app.post("/api/location/<share_id>")
 def update_location(share_id):
 
+    if not valid_share_id(share_id):
+        return jsonify(
+            ok=False,
+            error="Invalid share ID"
+        ), 400
+
     ok, error = require_supabase()
 
     if not ok:
-
         return jsonify(
             ok=False,
             error=error[0]
         ), error[1]
 
-
-    data =
-        request.get_json(
-            silent=True
-        ) or {}
-
+    data = request.get_json(
+        silent=True
+    ) or {}
 
     try:
-
         latitude = float(
             data["latitude"]
         )
@@ -518,27 +422,22 @@ def update_location(share_id):
         TypeError,
         ValueError
     ):
-
         return jsonify(
             ok=False,
             error="Invalid location"
         ), 400
-
 
     if not (
         -90 <= latitude <= 90
         and
         -180 <= longitude <= 180
     ):
-
         return jsonify(
             ok=False,
             error="Invalid coordinates"
         ), 400
 
-
     response = requests.patch(
-
         f"{SUPABASE_URL}"
         "/rest/v1/"
         "sharespace_shares"
@@ -546,74 +445,54 @@ def update_location(share_id):
 
         headers={
             **sb_headers(),
-
-            "Content-Type":
-                "application/json",
-
-            "Prefer":
-                "return=minimal"
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
         },
 
         json={
-
-            "latitude":
-                latitude,
-
-            "longitude":
-                longitude,
-
-            "accuracy":
-                accuracy,
-
-            "active":
-                True,
-
-            "updated_at":
-                now_utc()
-
+            "latitude": latitude,
+            "longitude": longitude,
+            "accuracy": accuracy,
+            "active": True,
+            "updated_at": now_utc()
         },
 
         timeout=20
     )
 
-
-    if response.status_code not in (
-        200,
-        204
-    ):
+    if response.status_code not in (200, 204):
 
         return jsonify(
             ok=False,
             error="Location update failed",
-            details=
-                response.text[:500]
+            details=response.text[:500]
         ), 502
 
-
-    return jsonify(
-        ok=True
-    )
+    return jsonify(ok=True)
 
 
-# ==============================
+# ==========================================
 # STOP SHARING
-# ==============================
+# ==========================================
 
 @app.post("/api/stop/<share_id>")
 def stop_share(share_id):
 
+    if not valid_share_id(share_id):
+        return jsonify(
+            ok=False,
+            error="Invalid share ID"
+        ), 400
+
     ok, error = require_supabase()
 
     if not ok:
-
         return jsonify(
             ok=False,
             error=error[0]
         ), error[1]
 
-
     response = requests.patch(
-
         f"{SUPABASE_URL}"
         "/rest/v1/"
         "sharespace_shares"
@@ -621,12 +500,8 @@ def stop_share(share_id):
 
         headers={
             **sb_headers(),
-
-            "Content-Type":
-                "application/json",
-
-            "Prefer":
-                "return=minimal"
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
         },
 
         json={
@@ -637,104 +512,86 @@ def stop_share(share_id):
         timeout=20
     )
 
-
-    if response.status_code not in (
-        200,
-        204
-    ):
+    if response.status_code not in (200, 204):
 
         return jsonify(
             ok=False,
-            error="Stop failed"
+            error="Stop failed",
+            details=response.text[:500]
         ), 502
 
-
-    return jsonify(
-        ok=True
-    )
+    return jsonify(ok=True)
 
 
-# ==============================
+# ==========================================
 # ADMIN LOGIN
-# ==============================
+# ==========================================
 
 @app.post("/api/admin/login")
 def admin_login():
 
     if not ADMIN_PASSWORD:
-
         return jsonify(
             ok=False,
-            error=
-              "SHARESPACE_PASSWORD is not configured."
+            error=(
+                "SHARESPACE_PASSWORD "
+                "is not configured."
+            )
         ), 500
 
-
-    supplied =
-        request.headers.get(
-            "X-Admin-Password",
-            ""
-        )
-
+    supplied = request.headers.get(
+        "X-Admin-Password",
+        ""
+    )
 
     if supplied != ADMIN_PASSWORD:
-
         return jsonify(
             ok=False,
             error="Wrong password"
         ), 401
 
-
-    return jsonify(
-        ok=True
-    )
+    return jsonify(ok=True)
 
 
-# ==============================
+# ==========================================
 # CHECK ADMIN PASSWORD
-# ==============================
+# ==========================================
 
 def admin_password_ok():
 
     if not ADMIN_PASSWORD:
         return False
 
-    supplied =
-        request.headers.get(
-            "X-Admin-Password",
-            ""
-        )
+    supplied = request.headers.get(
+        "X-Admin-Password",
+        ""
+    )
 
     return supplied == ADMIN_PASSWORD
 
 
-# ==============================
+# ==========================================
 # DASHBOARD DATA
-# ==============================
+# ==========================================
 
 @app.get("/api/dashboard")
 def dashboard_data():
 
     if not admin_password_ok():
-
         return jsonify(
             ok=False,
             error="Unauthorized"
         ), 401
 
-
     ok, error = require_supabase()
 
     if not ok:
-
         return jsonify(
             ok=False,
             error=error[0]
         ), error[1]
 
-
     response = requests.get(
-
         f"{SUPABASE_URL}"
         "/rest/v1/"
         "sharespace_shares"
@@ -755,44 +612,34 @@ def dashboard_data():
         timeout=20
     )
 
-
     if response.status_code != 200:
 
         return jsonify(
             ok=False,
             error="Database read failed",
-            details=
-                response.text[:500]
+            details=response.text[:500]
         ), 502
 
+    items = response.json()
 
-    items =
-        response.json()
-
-
-    # ==========================
-    # CREATE SIGNED PHOTO URL
-    # ==========================
+    # --------------------------------------
+    # SIGNED PHOTO URL
+    # --------------------------------------
 
     for item in items:
 
         item["photo_url"] = None
 
-
-        photo_path =
-            item.get(
-                "photo_path"
-            )
-
+        photo_path = item.get(
+            "photo_path"
+        )
 
         if not photo_path:
             continue
 
-
         try:
 
             signed = requests.post(
-
                 f"{SUPABASE_URL}"
                 "/storage/v1/object/sign/"
                 f"{SUPABASE_BUCKET}/"
@@ -800,8 +647,7 @@ def dashboard_data():
 
                 headers={
                     **sb_headers(),
-                    "Content-Type":
-                        "application/json"
+                    "Content-Type": "application/json"
                 },
 
                 json={
@@ -811,30 +657,21 @@ def dashboard_data():
                 timeout=20
             )
 
-
             if signed.status_code == 200:
 
-                signed_path =
-                    signed.json().get(
-                        "signedURL"
-                    )
-
+                signed_path = signed.json().get(
+                    "signedURL"
+                )
 
                 if signed_path:
 
-                    if signed_path.startswith(
-                        "http"
-                    ):
+                    if signed_path.startswith("http"):
 
-                        item[
-                            "photo_url"
-                        ] = signed_path
+                        item["photo_url"] = signed_path
 
                     else:
 
-                        item[
-                            "photo_url"
-                        ] = (
+                        item["photo_url"] = (
                             f"{SUPABASE_URL}"
                             "/storage/v1"
                             f"{signed_path}"
@@ -843,16 +680,15 @@ def dashboard_data():
         except Exception:
             pass
 
-
     return jsonify(
         ok=True,
         items=items
     )
 
 
-# ==============================
+# ==========================================
 # START SERVER
-# ==============================
+# ==========================================
 
 if __name__ == "__main__":
 
@@ -866,4 +702,4 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=port
-        )
+    )

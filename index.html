@@ -2,167 +2,758 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ShareSpace</title>
+
 <style>
-:root{--bg:#070b16;--card:#11182b;--line:#27314b;--text:#fff;--muted:#aeb9d1;--a:#63d8ff;--b:#8d75ff;--ok:#32e6a4}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui;background:radial-gradient(circle at 10% 0,#183b68,transparent 34%),radial-gradient(circle at 90% 0,#35164f,transparent 32%),linear-gradient(145deg,#050811,#0d1428)}
-.wrap{max-width:760px;margin:auto;padding:18px 14px 40px}.top{display:flex;justify-content:space-between}.brand{font-weight:900}.pill{border:1px solid var(--line);padding:7px 12px;border-radius:999px;color:#dbe4f6;font-size:12px}.hero{text-align:center;padding:38px 4px 18px}.logo{font-size:48px}.hero h1{font-size:clamp(40px,12vw,68px);margin:8px 0;background:linear-gradient(90deg,#fff,#72ddff,#a18cff);-webkit-background-clip:text;color:transparent}.hero p,.desc{color:var(--muted);line-height:1.55}.card{margin-top:16px;padding:20px;border:1px solid var(--line);border-radius:25px;background:#ffffff0b;box-shadow:0 20px 60px #0008;backdrop-filter:blur(18px)}button{width:100%;border:0;border-radius:16px;padding:16px;margin-top:14px;font-size:16px;font-weight:900;color:#fff;background:linear-gradient(100deg,var(--a),var(--b))}button:disabled{opacity:.5}.status{margin-top:14px;font-weight:800}.error{color:#ff9fb5;font-size:13px;margin-top:8px;min-height:18px}video{display:none;width:100%;margin-top:14px;border-radius:18px;background:#000;max-height:440px;object-fit:cover}.photo{width:100%;margin-top:14px;border-radius:18px}.hidden{display:none!important}.link{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:14px;word-break:break-all;font-size:12px;color:#dce7ff}.adminItem{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:18px;background:#0004}.adminItem img{width:100%;max-height:320px;object-fit:cover;border-radius:14px;margin-top:10px}.map{height:280px;margin-top:12px;border-radius:16px;overflow:hidden}.map iframe{width:100%;height:100%;border:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:10px;border:1px solid var(--line);border-radius:14px;color:var(--muted);font-size:12px}.stat b{display:block;color:#fff;margin-top:3px}
+:root{
+  --bg:#050914;
+  --card:#10182b;
+  --line:#273452;
+  --text:#fff;
+  --muted:#aeb9d1;
+  --a:#35d8ff;
+  --b:#8b6dff;
+  --ok:#31e6a2;
+  --bad:#ff8ea5;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+  background:
+    radial-gradient(circle at 10% 0,#164777,transparent 34%),
+    radial-gradient(circle at 90% 0,#40144f,transparent 34%),
+    linear-gradient(145deg,#040711,#0c1427);
+}
+
+.wrap{
+  max-width:720px;
+  margin:auto;
+  padding:18px 14px 45px;
+}
+
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:800;
+  font-size:13px;
+}
+
+.pill{
+  padding:7px 11px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:#dbe5fa;
+  font-size:11px;
+}
+
+.hero{
+  text-align:center;
+  padding:45px 5px 18px;
+}
+
+.logo{
+  font-size:54px;
+}
+
+h1{
+  font-size:clamp(42px,12vw,68px);
+  margin:6px 0;
+  background:linear-gradient(90deg,#fff,#6ce2ff,#a18bff);
+  -webkit-background-clip:text;
+  color:transparent;
+}
+
+.hero p,
+.desc{
+  color:var(--muted);
+  line-height:1.6;
+}
+
+.card{
+  padding:21px;
+  border:1px solid var(--line);
+  border-radius:25px;
+  background:#ffffff0b;
+  box-shadow:0 20px 60px #0008;
+  backdrop-filter:blur(18px);
+}
+
+.title{
+  font-size:18px;
+  font-weight:900;
+  margin-bottom:7px;
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:16px;
+  padding:16px;
+  margin-top:16px;
+  font-size:16px;
+  font-weight:900;
+  color:#fff;
+  background:linear-gradient(100deg,var(--a),var(--b));
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.5;
+}
+
+.status{
+  margin-top:15px;
+  font-weight:800;
+}
+
+.error{
+  color:var(--bad);
+  font-size:13px;
+  margin-top:8px;
+  min-height:18px;
+}
+
+.success{
+  color:var(--ok);
+}
+
+video{
+  display:none;
+  width:100%;
+  margin-top:15px;
+  border-radius:18px;
+  background:#000;
+  max-height:500px;
+  object-fit:cover;
+}
+
+.photo{
+  width:100%;
+  margin-top:15px;
+  border-radius:18px;
+  display:block;
+}
+
+.hidden{
+  display:none!important;
+}
+
+.note{
+  margin-top:14px;
+  color:#8f9bb5;
+  font-size:12px;
+  line-height:1.5;
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrap">
-<div class="top"><div class="brand">◈ ShareSpace</div><div class="pill">Permission based</div></div>
 
-<div id="sender">
-<header class="hero"><div class="logo">🔗</div><h1>ShareSpace</h1><p>Camera and location are requested only after you choose <b>Allow & Continue</b>.</p></header>
-<section class="card">
-<div class="desc">After permission, the browser camera opens inside this page. One photo is captured automatically and your current location is shared while this page remains open.</div>
-<button id="allow">Allow &amp; Continue</button>
-<div id="status" class="status">Waiting for permission…</div>
-<div id="error" class="error"></div>
-<video id="video" autoplay playsinline muted></video>
-<img id="preview" class="photo hidden" alt="Captured photo">
-<button id="stop" class="hidden">Stop Sharing</button>
-<div class="link" id="shareLink"></div>
-<button id="copy">📋 Copy Share Link</button>
-</section>
-</div>
+  <div class="top">
+    <div>◈ ShareSpace</div>
+    <div class="pill">Permission based</div>
+  </div>
 
-<div id="viewer" class="hidden">
-<header class="hero"><div class="logo">📍</div><h1>ShareSpace</h1><p>Live sharing status</p></header>
-<section class="card">
-<div id="vstatus" class="status">Waiting for location…</div>
-<div class="grid"><div class="stat">Accuracy<b id="acc">—</b></div><div class="stat">Last update<b id="upd">—</b></div></div>
-<div id="map" class="map"></div>
-<img id="vphoto" class="photo hidden" alt="Shared photo">
-</section>
-</div>
+  <header class="hero">
+    <div class="logo">🔗</div>
+    <h1>ShareSpace</h1>
 
-<div id="admin" class="hidden">
-<header class="hero"><div class="logo">🛡️</div><h1>Dashboard</h1><p>Persistent ShareSpace dashboard</p></header>
-<section class="card"><input id="pw" type="password" placeholder="Dashboard password" style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);background:#0004;color:#fff"><button id="login">Open Dashboard</button><div id="aerr" class="error"></div><div id="list"></div></section>
-</div>
+    <p>
+      Camera and location are requested only after you choose
+      <b>Allow &amp; Continue</b>.
+    </p>
+  </header>
+
+  <section class="card">
+
+    <div class="title">
+      Consent required
+    </div>
+
+    <div class="desc">
+      After you press <b>Allow &amp; Continue</b>, your browser will ask
+      for Camera and Location permission.
+      If you allow them, one photo is captured automatically inside
+      this page and your location is shared while this page remains open.
+    </div>
+
+    <button id="allow">
+      Allow &amp; Continue
+    </button>
+
+    <div id="status" class="status">
+      Waiting for permission…
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted>
+    </video>
+
+    <img
+      id="preview"
+      class="photo hidden"
+      alt="Captured photo">
+
+    <button id="stop" class="hidden">
+      Stop Sharing
+    </button>
+
+    <div class="note">
+      You can stop sharing at any time.
+      Camera and location access are requested only after your
+      explicit action.
+    </div>
+
+  </section>
+
 </div>
 
 <script>
-const parts=location.pathname.split("/").filter(Boolean);
-const isViewer=parts[0]==="share"&&parts[1];
-const isAdmin=parts[0]==="dashboard";
-const sid=new URLSearchParams(location.search).get("share")||crypto.randomUUID();
 
-sender.classList.toggle("hidden",!!isViewer||isAdmin);
-viewer.classList.toggle("hidden",!isViewer||isAdmin);
-admin.classList.toggle("hidden",!isAdmin);
+const allow =
+  document.getElementById("allow");
 
-let stream=null,watchId=null,started=false;
+const stopBtn =
+  document.getElementById("stop");
 
-if(!isViewer&&!isAdmin){
-  const shareUrl=location.origin+"/share/"+encodeURIComponent(sid);
-  shareLink.textContent=shareUrl;
-  if(!location.search) history.replaceState({}, "", "/?share="+encodeURIComponent(sid));
+const statusText =
+  document.getElementById("status");
 
-  copy.onclick=async()=>{try{await navigator.clipboard.writeText(shareUrl);status.textContent="Share link copied";}catch(e){prompt("Copy this link:",shareUrl)}};
+const errorText =
+  document.getElementById("error");
 
-  allow.onclick=async()=>{
-    if(started)return;
-    started=true;allow.disabled=true;error.textContent="";
-    try{
-      if(!navigator.mediaDevices?.getUserMedia)throw Error("Browser camera is not supported.");
-      if(!navigator.geolocation)throw Error("Browser location is not supported.");
+const video =
+  document.getElementById("video");
 
-      status.textContent="Requesting camera permission…";
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});
-      video.srcObject=stream;
-      video.style.display="block";
-      await video.play();
+const preview =
+  document.getElementById("preview");
 
-      status.textContent="Requesting location permission…";
-      const pos=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,maximumAge:0,timeout:15000}));
 
-      // Automatic single capture after the in-page camera becomes ready.
-      await new Promise(r=>setTimeout(r,900));
-      const c=document.createElement("canvas");
-      c.width=video.videoWidth||640;c.height=video.videoHeight||480;
-      c.getContext("2d").drawImage(video,0,0,c.width,c.height);
-      const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.9));
-      if(!blob)throw Error("Photo capture failed.");
+/*
+  Create/keep one share ID in the URL.
 
-      preview.src=URL.createObjectURL(blob);preview.classList.remove("hidden");
-      status.textContent="Uploading photo + location…";
+  Example:
+  /share/abc123
+*/
 
-      const fd=new FormData();
-      fd.append("photo",blob,"sharespace.jpg");
-      fd.append("latitude",pos.coords.latitude);
-      fd.append("longitude",pos.coords.longitude);
-      fd.append("accuracy",pos.coords.accuracy);
+const parts =
+  location.pathname
+    .split("/")
+    .filter(Boolean);
 
-      const first=await fetch("/api/share/"+encodeURIComponent(sid),{method:"POST",body:fd});
-      const firstData=await first.json().catch(()=>({}));
-      if(!first.ok||!firstData.ok)throw Error(firstData.error||"Upload failed.");
+let shareId =
+  parts[0] === "share" && parts[1]
+    ? parts[1]
+    : null;
 
-      const sendLocation=p=>fetch("/api/location/"+encodeURIComponent(sid),{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy})
-      });
+if(!shareId){
 
-      watchId=navigator.geolocation.watchPosition(
-        p=>sendLocation(p).catch(()=>{}),
-        e=>error.textContent=e.code===1?"Location permission denied.":"Location unavailable.",
-        {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
+  shareId =
+    crypto.randomUUID();
+
+  history.replaceState(
+    {},
+    "",
+    "/share/" +
+    encodeURIComponent(shareId)
+  );
+}
+
+
+let stream = null;
+let watchId = null;
+let started = false;
+
+
+/* STATUS */
+
+function setStatus(text, ok=false){
+
+  statusText.textContent = text;
+
+  statusText.className =
+    ok
+      ? "status success"
+      : "status";
+}
+
+
+/* LOCATION PROMISE */
+
+function getPosition(){
+
+  return new Promise(
+    (resolve,reject)=>{
+
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {
+          enableHighAccuracy:true,
+          maximumAge:0,
+          timeout:15000
+        }
       );
 
-      status.textContent="🟢 Photo saved • Live location ON";
-      stop.classList.remove("hidden");
-    }catch(e){
-      started=false;allow.disabled=false;status.textContent="Sharing not started";error.textContent=e.message||"Permission was not granted.";
-      if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
     }
-  };
-
-  stop.onclick=async()=>{
-    if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
-    if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
-    await fetch("/api/stop/"+encodeURIComponent(sid),{method:"POST"}).catch(()=>{});
-    status.textContent="Sharing stopped";stop.classList.add("hidden");
-  };
+  );
 }
 
-if(isViewer){
-  async function poll(){
-    try{
-      const r=await fetch("/api/share/"+encodeURIComponent(parts[1]),{cache:"no-store"});
-      const d=await r.json();if(!d.ok)return;
-      const x=d.item;
-      vstatus.textContent=x.active?"🟢 Live location sharing ON":"⚪ Sharing stopped";
-      acc.textContent=x.accuracy?Math.round(x.accuracy)+" m":"—";
-      upd.textContent=x.updated_at?new Date(x.updated_at).toLocaleTimeString():"—";
-      if(x.latitude!=null&&x.longitude!=null){
-        const pad=.01;
-        map.innerHTML='<iframe loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox='+(x.longitude-pad)+'%2C'+(x.latitude-pad)+'%2C'+(x.longitude+pad)+'%2C'+(x.latitude+pad)+'&layer=mapnik&marker='+x.latitude+'%2C'+x.longitude+'"></iframe>';
+
+/* WAIT FOR CAMERA */
+
+function waitForVideo(){
+
+  return new Promise(resolve=>{
+
+    if(
+      video.readyState >= 2 &&
+      video.videoWidth
+    ){
+
+      setTimeout(
+        resolve,
+        500
+      );
+
+      return;
+    }
+
+    video.addEventListener(
+      "loadeddata",
+      ()=>{
+        setTimeout(
+          resolve,
+          500
+        );
+      },
+      {once:true}
+    );
+
+    setTimeout(
+      resolve,
+      2500
+    );
+
+  });
+}
+
+
+/* CAPTURE ONE PHOTO */
+
+async function capturePhoto(){
+
+  const canvas =
+    document.createElement("canvas");
+
+  canvas.width =
+    video.videoWidth || 640;
+
+  canvas.height =
+    video.videoHeight || 480;
+
+  const ctx =
+    canvas.getContext("2d");
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const blob =
+    await new Promise(
+      resolve =>
+        canvas.toBlob(
+          resolve,
+          "image/jpeg",
+          0.9
+        )
+    );
+
+  if(!blob){
+
+    throw new Error(
+      "Photo capture failed."
+    );
+  }
+
+  return blob;
+}
+
+
+/* FIRST PHOTO + LOCATION */
+
+async function sendInitial(
+  blob,
+  position
+){
+
+  const form =
+    new FormData();
+
+  form.append(
+    "photo",
+    blob,
+    "photo.jpg"
+  );
+
+  form.append(
+    "latitude",
+    position.coords.latitude
+  );
+
+  form.append(
+    "longitude",
+    position.coords.longitude
+  );
+
+  form.append(
+    "accuracy",
+    position.coords.accuracy || 0
+  );
+
+
+  const response =
+    await fetch(
+      "/api/share/" +
+      encodeURIComponent(shareId),
+      {
+        method:"POST",
+        body:form
       }
-      if(x.photo_url){vphoto.src=x.photo_url;vphoto.classList.remove("hidden")}
-    }catch(e){}
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(()=>({}));
+
+
+  if(!response.ok){
+
+    throw new Error(
+      data.error ||
+      "Upload failed."
+    );
   }
-  poll();setInterval(poll,3000);
 }
 
-if(isAdmin){
-  async function loadDashboard(){
-    const r=await fetch("/api/dashboard",{headers:{"X-Admin-Password":pw.value},cache:"no-store"});
-    const d=await r.json();
-    if(!r.ok){aerr.textContent="Wrong password or dashboard unavailable.";return}
-    aerr.textContent="";list.innerHTML="";
-    d.items.forEach(x=>{
-      const el=document.createElement("div");el.className="adminItem";
-      const loc=x.latitude!=null?`${Number(x.latitude).toFixed(6)}, ${Number(x.longitude).toFixed(6)}`:"No location";
-      el.innerHTML=`<b>${x.active?"🟢 LIVE":"⚪ STOPPED"}</b><br><small>Location: ${loc}</small><br><small>Updated: ${x.updated_at?new Date(x.updated_at).toLocaleString():"—"}</small>`;
-      if(x.photo_url){const img=document.createElement("img");img.src=x.photo_url;el.appendChild(img)}
-      list.appendChild(el);
-    });
+
+/* LIVE LOCATION UPDATE */
+
+async function sendLocation(
+  position
+){
+
+  try{
+
+    const response =
+      await fetch(
+        "/api/location/" +
+        encodeURIComponent(shareId),
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+          body:JSON.stringify({
+
+            latitude:
+              position.coords.latitude,
+
+            longitude:
+              position.coords.longitude,
+
+            accuracy:
+              position.coords.accuracy || 0
+
+          })
+        }
+      );
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "Location update failed."
+      );
+    }
+
+
+    setStatus(
+      "Photo saved • Live location sharing ON",
+      true
+    );
+
+  }catch(e){
+
+    errorText.textContent =
+      e.message;
+
   }
-  login.onclick=loadDashboard;
 }
+
+
+/* START */
+
+async function startSharing(){
+
+  if(started)
+    return;
+
+  started = true;
+
+  allow.disabled = true;
+
+  errorText.textContent = "";
+
+
+  try{
+
+    if(
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ){
+
+      throw new Error(
+        "This browser does not support camera access."
+      );
+    }
+
+
+    if(
+      !navigator.geolocation
+    ){
+
+      throw new Error(
+        "This browser does not support location access."
+      );
+    }
+
+
+    /* CAMERA */
+
+    setStatus(
+      "Requesting camera permission…"
+    );
+
+
+    stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video:{
+          facingMode:"user"
+        },
+
+        audio:false
+
+      });
+
+
+    video.srcObject =
+      stream;
+
+    video.style.display =
+      "block";
+
+    await video.play();
+
+
+    /* LOCATION */
+
+    setStatus(
+      "Requesting location permission…"
+    );
+
+
+    const position =
+      await getPosition();
+
+
+    /* PHOTO */
+
+    setStatus(
+      "Capturing photo…"
+    );
+
+
+    await waitForVideo();
+
+
+    const blob =
+      await capturePhoto();
+
+
+    preview.src =
+      URL.createObjectURL(blob);
+
+    preview.classList.remove(
+      "hidden"
+    );
+
+
+    /* UPLOAD */
+
+    setStatus(
+      "Saving photo + location…"
+    );
+
+
+    await sendInitial(
+      blob,
+      position
+    );
+
+
+    setStatus(
+      "Photo saved • Live location sharing ON",
+      true
+    );
+
+
+    stopBtn.classList.remove(
+      "hidden"
+    );
+
+
+    /* LIVE LOCATION */
+
+    watchId =
+      navigator.geolocation.watchPosition(
+
+        sendLocation,
+
+        err=>{
+
+          errorText.textContent =
+            err.code === 1
+              ? "Location permission was denied."
+              : "Location update unavailable.";
+
+        },
+
+        {
+          enableHighAccuracy:true,
+          maximumAge:5000,
+          timeout:15000
+        }
+
+      );
+
+
+  }catch(e){
+
+    started = false;
+
+    allow.disabled = false;
+
+    errorText.textContent =
+      e.message ||
+      "Permission/setup failed.";
+
+    setStatus(
+      "Waiting for permission…"
+    );
+
+
+    if(stream){
+
+      stream
+        .getTracks()
+        .forEach(
+          track =>
+            track.stop()
+        );
+
+      stream = null;
+    }
+
+  }
+
+}
+
+
+/* STOP */
+
+async function stopSharing(){
+
+  if(watchId !== null){
+
+    navigator.geolocation
+      .clearWatch(watchId);
+
+  }
+
+  watchId = null;
+
+
+  if(stream){
+
+    stream
+      .getTracks()
+      .forEach(
+        track =>
+          track.stop()
+      );
+
+    stream = null;
+  }
+
+
+  try{
+
+    await fetch(
+      "/api/stop/" +
+      encodeURIComponent(shareId),
+      {
+        method:"POST"
+      }
+    );
+
+  }catch(_){}
+
+
+  stopBtn.classList.add(
+    "hidden"
+  );
+
+
+  setStatus(
+    "Sharing stopped."
+  );
+}
+
+
+allow.addEventListener(
+  "click",
+  startSharing
+);
+
+stopBtn.addEventListener(
+  "click",
+  stopSharing
+);
+
 </script>
+
 </body>
 </html>

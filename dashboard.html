@@ -1,190 +1,818 @@
 <!doctype html>
 <html lang="en">
+
 <head>
+
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1">
+
 <title>ShareSpace Dashboard</title>
 
 <style>
-*{box-sizing:border-box}
+
+:root{
+  --bg:#050914;
+  --card:#10182b;
+  --line:#273452;
+  --text:#fff;
+  --muted:#aeb9d1;
+  --a:#35d8ff;
+  --b:#8b6dff;
+  --ok:#31e6a2;
+  --bad:#ff8ea5;
+}
+
+*{
+  box-sizing:border-box;
+}
+
 body{
- margin:0;
- min-height:100vh;
- font-family:Inter,Arial,sans-serif;
- color:#fff;
- background:
- radial-gradient(circle at 0 0,#10284b,transparent 35%),
- radial-gradient(circle at 100% 100%,#2a102e,transparent 40%),
- #03060d;
- padding:24px 14px;
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
+
+  background:
+    radial-gradient(
+      circle at 10% 0,
+      #164777,
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 90% 0,
+      #40144f,
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      #040711,
+      #0c1427
+    );
 }
-.header{
- text-align:center;
- margin-bottom:20px;
+
+.wrap{
+  max-width:900px;
+  margin:auto;
+  padding:18px 14px 45px;
 }
-.logo{
- font-size:28px;
- font-weight:900;
-}
-.muted{color:#aab4d0}
-.container{
- max-width:700px;
- margin:auto;
-}
-.card{
- background:rgba(25,31,57,.94);
- border:1px solid rgba(255,255,255,.13);
- border-radius:26px;
- padding:22px;
- box-shadow:0 25px 70px rgba(0,0,0,.4);
-}
+
 .top{
- display:flex;
- align-items:center;
- justify-content:space-between;
- gap:10px;
+  display:flex;
+  justify-content:space-between;
+  font-weight:800;
+  font-size:13px;
 }
-.online{
- padding:8px 12px;
- border-radius:20px;
- background:#063d2d;
- color:#69f3bb;
- font-size:12px;
+
+.pill{
+  padding:7px 11px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  font-size:11px;
 }
-h2{margin:0}
-h3{margin-top:30px}
-.photo{
- width:100%;
- max-height:650px;
- object-fit:contain;
- border-radius:18px;
- background:#050811;
+
+.hero{
+  text-align:center;
+  padding:45px 5px 18px;
 }
-.info{
- margin-top:16px;
- background:rgba(255,255,255,.05);
- padding:16px;
- border-radius:15px;
- line-height:1.8;
- color:#dce2f2;
+
+.logo{
+  font-size:54px;
 }
+
+h1{
+  font-size:
+    clamp(40px,11vw,64px);
+
+  margin:6px 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fff,
+      #6ce2ff,
+      #a18bff
+    );
+
+  -webkit-background-clip:text;
+  color:transparent;
+}
+
+.hero p{
+  color:var(--muted);
+}
+
+.card{
+  padding:21px;
+  border:1px solid var(--line);
+  border-radius:25px;
+  background:#ffffff0b;
+  box-shadow:0 20px 60px #0008;
+  backdrop-filter:blur(18px);
+}
+
+input{
+  width:100%;
+  padding:15px;
+  border-radius:15px;
+  border:1px solid var(--line);
+  background:#0005;
+  color:#fff;
+  font-size:16px;
+  outline:none;
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:16px;
+  padding:16px;
+  margin-top:14px;
+  font-size:16px;
+  font-weight:900;
+  color:#fff;
+
+  background:
+    linear-gradient(
+      100deg,
+      var(--a),
+      var(--b)
+    );
+}
+
+.status{
+  margin-top:13px;
+  font-weight:800;
+}
+
+.error{
+  color:var(--bad);
+  margin-top:8px;
+  font-size:13px;
+  min-height:18px;
+}
+
+.hidden{
+  display:none!important;
+}
+
+.item{
+  margin-top:16px;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:#0004;
+}
+
+.item img{
+  width:100%;
+  max-height:420px;
+  object-fit:cover;
+  border-radius:16px;
+  margin-top:12px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+
+.stat{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.stat b{
+  display:block;
+  color:#fff;
+  margin-top:4px;
+  font-size:14px;
+}
+
 .map{
- display:block;
- margin-top:16px;
- text-decoration:none;
- text-align:center;
- padding:15px;
- border-radius:15px;
- background:#fff;
- color:#111827;
- font-weight:800;
+  height:260px;
+  margin-top:12px;
+  border-radius:16px;
+  overflow:hidden;
 }
-.time{
- margin-top:16px;
- font-size:13px;
- color:#9faac8;
+
+.map iframe{
+  width:100%;
+  height:100%;
+  border:0;
 }
+
+a{
+  color:#76ddff;
+}
+
+.note{
+  color:#8f9bb5;
+  font-size:12px;
+  line-height:1.5;
+  margin-top:14px;
+}
+
 </style>
+
 </head>
 
 <body>
 
-<div class="header">
-  <div class="logo">ShareSpace</div>
-  <div class="muted">Consent-Based Sharing Dashboard</div>
+<div class="wrap">
+
+  <div class="top">
+
+    <div>
+      ◈ ShareSpace
+    </div>
+
+    <div class="pill">
+      Private Dashboard
+    </div>
+
+  </div>
+
+
+  <header class="hero">
+
+    <div class="logo">
+      🛡️
+    </div>
+
+    <h1>
+      Dashboard
+    </h1>
+
+    <p>
+      Persistent photo + location records.
+    </p>
+
+  </header>
+
+
+  <section
+    id="loginCard"
+    class="card">
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Dashboard password"
+      autocomplete="current-password">
+
+    <button id="loginBtn">
+      Open Dashboard
+    </button>
+
+    <div
+      id="loginError"
+      class="error">
+    </div>
+
+  </section>
+
+
+  <section
+    id="dash"
+    class="hidden">
+
+    <div class="card">
+
+      <button id="refreshBtn">
+        Refresh Records
+      </button>
+
+      <div
+        id="dashStatus"
+        class="status">
+        Loading…
+      </div>
+
+      <div id="list">
+      </div>
+
+      <div class="note">
+        Photo and location records are stored in
+        Supabase, so they remain available after
+        a Render restart.
+      </div>
+
+    </div>
+
+  </section>
+
 </div>
 
-<div class="container">
-<div class="card">
-
-<div class="top">
-  <h2>Dashboard</h2>
-  <div class="online">● Server Online</div>
-</div>
-
-<h3>Shared Photo</h3>
-
-<div id="photoBox">
-  <div class="muted">Loading…</div>
-</div>
-
-<h3>Live Location</h3>
-
-<div id="locationBox" class="info">
-  Loading…
-</div>
-
-<div id="mapBox"></div>
-
-<div id="updated" class="time"></div>
-
-</div>
-</div>
 
 <script>
-async function load(){
-  try{
-    const r=await fetch("/api/latest?cb="+Date.now(),{
-      cache:"no-store"
-    });
 
-    const result=await r.json();
+const passwordInput =
+  document.getElementById(
+    "password"
+  );
 
-    if(!result.ok || !result.data){
-      document.getElementById("photoBox").innerHTML=
-        '<div class="muted">No shared data yet.</div>';
+const loginBtn =
+  document.getElementById(
+    "loginBtn"
+  );
 
-      document.getElementById("locationBox").textContent=
-        "No location available.";
+const loginError =
+  document.getElementById(
+    "loginError"
+  );
 
-      return;
-    }
+const loginCard =
+  document.getElementById(
+    "loginCard"
+  );
 
-    const d=result.data;
+const dash =
+  document.getElementById(
+    "dash"
+  );
 
-    if(d.photo_url){
-      document.getElementById("photoBox").innerHTML=
-        `<img class="photo" src="${d.photo_url}" alt="Shared photo">`;
-    }else{
-      document.getElementById("photoBox").innerHTML=
-        '<div class="muted">No photo available.</div>';
-    }
+const list =
+  document.getElementById(
+    "list"
+  );
 
-    const lat=d.latitude;
-    const lon=d.longitude;
+const dashStatus =
+  document.getElementById(
+    "dashStatus"
+  );
 
-    document.getElementById("locationBox").innerHTML=
-      `Latitude: ${lat ?? "Unknown"}<br>
-       Longitude: ${lon ?? "Unknown"}<br>
-       Accuracy: ${d.accuracy ? Math.round(d.accuracy)+" meters" : "Unknown"}`;
+const refreshBtn =
+  document.getElementById(
+    "refreshBtn"
+  );
 
-    if(lat != null && lon != null){
-      document.getElementById("mapBox").innerHTML=
-        `<a class="map"
-        target="_blank"
-        rel="noopener"
-        href="https://www.google.com/maps?q=${encodeURIComponent(lat)},${encodeURIComponent(lon)}">
-        📍 Open Location in Google Maps
-        </a>`;
-    }
 
-    document.getElementById("updated").textContent=
-      "Updated (IST): "+(d.created_at || "Unknown");
+let adminPassword = "";
 
-  }catch(e){
-    console.error(e);
 
-    document.getElementById("photoBox").innerHTML=
-      '<div class="muted">Unable to load dashboard.</div>';
+/* HTML ESCAPE */
 
-    document.getElementById("locationBox").textContent=
-      "Server error.";
-  }
+function esc(value){
+
+  return String(
+    value ?? ""
+  ).replace(
+    /[&<>"']/g,
+    c=>({
+
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+
+    }[c])
+  );
+
 }
 
-load();
-setInterval(load,10000);
+
+/* MAP */
+
+function mapUrl(
+  lat,
+  lng
+){
+
+  return (
+    "https://www.openstreetmap.org/"
+    +
+    "export/embed.html?"
+    +
+    "bbox="
+
+    +
+
+    (lng - 0.01)
+
+    +
+
+    "%2C"
+
+    +
+
+    (lat - 0.01)
+
+    +
+
+    "%2C"
+
+    +
+
+    (lng + 0.01)
+
+    +
+
+    "%2C"
+
+    +
+
+    (lat + 0.01)
+
+    +
+
+    "&layer=mapnik&marker="
+
+    +
+
+    lat
+
+    +
+
+    "%2C"
+
+    +
+
+    lng
+  );
+
+}
+
+
+/* LOAD DASHBOARD */
+
+async function loadDashboard(){
+
+  dashStatus.textContent =
+    "Loading records…";
+
+
+  const response =
+    await fetch(
+      "/api/dashboard",
+      {
+        headers:{
+          "X-Admin-Password":
+            adminPassword
+        }
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(
+        ()=>({})
+      );
+
+
+  if(
+    response.status === 401
+  ){
+
+    adminPassword = "";
+
+    loginCard
+      .classList
+      .remove(
+        "hidden"
+      );
+
+    dash
+      .classList
+      .add(
+        "hidden"
+      );
+
+    loginError.textContent =
+      "Wrong password.";
+
+    return;
+  }
+
+
+  if(
+    !response.ok ||
+    !data.ok
+  ){
+
+    dashStatus.textContent =
+      data.error ||
+      "Dashboard unavailable.";
+
+    return;
+  }
+
+
+  loginCard
+    .classList
+    .add(
+      "hidden"
+    );
+
+  dash
+    .classList
+    .remove(
+      "hidden"
+    );
+
+
+  const items =
+    data.items || [];
+
+
+  dashStatus.textContent =
+    items.length
+      ? items.length +
+        " record(s)"
+      : "No records yet.";
+
+
+  list.innerHTML =
+    items.map(
+      item=>{
+
+        const hasLocation =
+          item.latitude !== null &&
+          item.longitude !== null;
+
+
+        return `
+
+<article class="item">
+
+  <b>
+    Share ID:
+  </b>
+
+  ${esc(item.share_id)}
+
+
+  <div class="grid">
+
+    <div class="stat">
+
+      Status
+
+      <b>
+        ${
+          item.active
+            ? "LIVE"
+            : "STOPPED"
+        }
+      </b>
+
+    </div>
+
+
+    <div class="stat">
+
+      Accuracy
+
+      <b>
+
+        ${
+          hasLocation
+            ? Number(
+                item.accuracy || 0
+              ).toFixed(1)
+              + " m"
+            : "—"
+        }
+
+      </b>
+
+    </div>
+
+
+    <div class="stat">
+
+      Created
+
+      <b>
+        ${esc(
+          item.created_at
+        )}
+      </b>
+
+    </div>
+
+
+    <div class="stat">
+
+      Updated
+
+      <b>
+        ${esc(
+          item.updated_at ||
+          "—"
+        )}
+      </b>
+
+    </div>
+
+  </div>
+
+
+  ${
+    item.photo_url
+      ?
+
+      `
+      <img
+        src="${esc(
+          item.photo_url
+        )}"
+        alt="Shared photo">
+      `
+
+      :
+
+      ""
+  }
+
+
+  ${
+    hasLocation
+
+      ?
+
+      `
+
+      <div class="map">
+
+        <iframe
+          loading="lazy"
+          src="${mapUrl(
+            item.latitude,
+            item.longitude
+          )}">
+        </iframe>
+
+      </div>
+
+
+      <div
+        class="stat"
+        style="margin-top:10px">
+
+        Location
+
+        <b>
+
+          ${esc(
+            item.latitude
+          )},
+
+          ${esc(
+            item.longitude
+          )}
+
+        </b>
+
+      </div>
+
+
+      <p>
+
+        <a
+          target="_blank"
+          rel="noopener"
+          href="https://www.google.com/maps?q=${
+            encodeURIComponent(
+              item.latitude +
+              "," +
+              item.longitude
+            )
+          }">
+
+          Open location in Google Maps
+
+        </a>
+
+      </p>
+
+      `
+
+      :
+
+      ""
+  }
+
+</article>
+
+        `;
+
+      }
+    ).join("");
+
+}
+
+
+/* LOGIN */
+
+async function login(){
+
+  loginError.textContent =
+    "";
+
+
+  const value =
+    passwordInput.value;
+
+
+  if(!value){
+
+    loginError.textContent =
+      "Enter the dashboard password.";
+
+    return;
+  }
+
+
+  const response =
+    await fetch(
+      "/api/admin/login",
+      {
+        method:"POST",
+
+        headers:{
+          "X-Admin-Password":
+            value
+        }
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(
+        ()=>({})
+      );
+
+
+  if(
+    !response.ok ||
+    !data.ok
+  ){
+
+    loginError.textContent =
+      data.error ||
+      "Wrong password.";
+
+    return;
+  }
+
+
+  adminPassword =
+    value;
+
+
+  passwordInput.value =
+    "";
+
+
+  await loadDashboard();
+
+}
+
+
+/* EVENTS */
+
+loginBtn.addEventListener(
+  "click",
+  login
+);
+
+
+refreshBtn.addEventListener(
+  "click",
+  loadDashboard
+);
+
+
+passwordInput.addEventListener(
+  "keydown",
+  e=>{
+
+    if(e.key === "Enter"){
+      login();
+    }
+
+  }
+);
+
 </script>
 
 </body>
+
 </html>

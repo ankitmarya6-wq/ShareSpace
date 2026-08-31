@@ -1,189 +1,267 @@
 import os
-import json
-import base64
 import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse
 
-HOST = "0.0.0.0"
-PORT = int(os.environ.get("PORT", "8080"))
-IST = ZoneInfo("Asia/Kolkata")
+import requests
+from flask import Flask, request, jsonify, send_from_directory
+
+app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-DATA_FILE = os.path.join(BASE_DIR, "shared.json")
-
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f)
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+BUCKET = os.environ.get("SUPABASE_BUCKET", "sharespace")
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def now_ist():
-    return datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(IST).isoformat(timespec="seconds")
 
 
-def load_data():
+def headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+    }
+
+
+def create_bucket():
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return
+
+    url = f"{SUPABASE_URL}/storage/v1/bucket"
+    payload = {
+        "id": BUCKET,
+        "name": BUCKET,
+        "public": False,
+        "file_size_limit": 10485760,
+    }
+
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+        r = requests.post(
+            url,
+            headers={**headers(), "Content-Type": "application/json"},
+            json=payload,
+            timeout=15,
+        )
+
+        if r.status_code in (200, 201):
+            print("Supabase bucket ready.")
+        elif r.status_code == 409:
+            print("Supabase bucket already exists.")
+        else:
+            print("Bucket response:", r.status_code, r.text[:300])
+    except Exception as e:
+        print("Bucket check failed:", e)
 
 
-def save_data(data):
-    temp = DATA_FILE + ".tmp"
-    with open(temp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    os.replace(temp, DATA_FILE)
+@app.route("/")
+def index():
+    return send_from_directory(BASE_DIR, "index.html")
 
 
-class Handler(SimpleHTTPRequestHandler):
+@app.route("/dashboard")
+def dashboard():
+    return send_from_directory(BASE_DIR, "dashboard.html")
 
-    def send_json(self, obj, status=200):
-        raw = json.dumps(obj).encode("utf-8")
 
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-        self.send_header("Pragma", "no-cache")
-        self.send_header("Content-Length", str(len(raw)))
-        self.end_headers()
-        self.wfile.write(raw)
+@app.route("/api/health")
+def health():
+    return jsonify({
+        "ok": True,
+        "service": "ShareSpace",
+        "time_ist": now_ist()
+    })
 
-    def do_GET(self):
-        path = urlparse(self.path).path
 
-        if path == "/api/latest":
-            self.send_json(load_data())
-            return
+@app.route("/api/share", methods=["POST"])
+def share():
+    """
+    Receives photo + location only after the browser has obtained
+    the user's explicit permission.
+    """
 
-        if path == "/dashboard":
-            self.path = "/dashboard.html"
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return jsonify({
+            "ok": False,
+            "error": "Supabase environment variables are missing."
+        }), 500
 
-        return super().do_GET()
+    photo = request.files.get("photo")
 
-    def do_POST(self):
-        path = urlparse(self.path).path
+    latitude = request.form.get("latitude")
+    longitude = request.form.get("longitude")
+    accuracy = request.form.get("accuracy")
 
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            length = 0
+    if not photo:
+        return jsonify({
+            "ok": False,
+            "error": "No photo received."
+        }), 400
 
-        if length > 15 * 1024 * 1024:
-            self.send_json({"error": "Request too large"}, 413)
-            return
+    ext = os.path.splitext(photo.filename or "")[1].lower()
 
-        body = self.rfile.read(length)
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        ext = ".jpg"
 
-        try:
-            data = json.loads(body.decode("utf-8"))
-        except Exception:
-            self.send_json({"error": "Invalid JSON"}, 400)
-            return
+    filename = f"{uuid.uuid4().hex}{ext}"
+    path = f"photos/{filename}"
 
-        shared = load_data()
+    content_type = photo.mimetype or "image/jpeg"
+    file_bytes = photo.read()
 
-        # Location — only received after browser permission/consent
-        if path == "/api/location":
+    upload_url = (
+        f"{SUPABASE_URL}/storage/v1/object/"
+        f"{BUCKET}/{path}"
+    )
 
-            if "latitude" not in data or "longitude" not in data:
-                self.send_json({"error": "Location missing"}, 400)
-                return
+    try:
+        upload = requests.post(
+            upload_url,
+            headers={
+                **headers(),
+                "Content-Type": content_type,
+                "x-upsert": "true",
+            },
+            data=file_bytes,
+            timeout=60,
+        )
 
-            shared["latitude"] = data["latitude"]
-            shared["longitude"] = data["longitude"]
-            shared["accuracy"] = data.get("accuracy")
-            shared["location_time"] = now_ist()
+        if upload.status_code not in (200, 201):
+            return jsonify({
+                "ok": False,
+                "error": "Supabase photo upload failed",
+                "details": upload.text[:500]
+            }), 502
 
-            save_data(shared)
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 502
 
-            self.send_json({
+    created = now_ist()
+
+    # Store metadata in Supabase database.
+    row = {
+        "photo_path": path,
+        "latitude": float(latitude) if latitude else None,
+        "longitude": float(longitude) if longitude else None,
+        "accuracy": float(accuracy) if accuracy else None,
+        "created_at": created,
+    }
+
+    try:
+        db = requests.post(
+            f"{SUPABASE_URL}/rest/v1/sharespace_shares",
+            headers={
+                **headers(),
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            },
+            json=row,
+            timeout=20,
+        )
+
+        if db.status_code not in (200, 201):
+            return jsonify({
+                "ok": False,
+                "error": "Database insert failed",
+                "details": db.text[:500]
+            }), 502
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 502
+
+    return jsonify({
+        "ok": True,
+        "message": "Shared successfully",
+        "photo_path": path,
+        "time_ist": created
+    })
+
+
+@app.route("/api/latest")
+def latest():
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/sharespace_shares"
+            "?select=*"
+            "&order=id.desc"
+            "&limit=1",
+            headers=headers(),
+            timeout=20,
+        )
+
+        if r.status_code != 200:
+            return jsonify({
+                "ok": False,
+                "error": r.text[:500]
+            }), 502
+
+        rows = r.json()
+
+        if not rows:
+            return jsonify({
                 "ok": True,
-                "location_time": shared["location_time"]
+                "data": None
             })
-            return
 
-        # Photo — only received after camera permission/consent
-        if path == "/api/photo":
+        data = rows[0]
 
-            photo = data.get("photo", "")
+        photo_path = data.get("photo_path")
 
-            if not isinstance(photo, str) or not photo.startswith("data:image/"):
-                self.send_json({"error": "Invalid photo"}, 400)
-                return
+        if photo_path:
+            signed = requests.post(
+                f"{SUPABASE_URL}/storage/v1/object/sign/"
+                f"{BUCKET}/{photo_path}",
+                headers={
+                    **headers(),
+                    "Content-Type": "application/json",
+                },
+                json={"expiresIn": 3600},
+                timeout=20,
+            )
 
-            try:
-                header, encoded = photo.split(",", 1)
-                image_data = base64.b64decode(encoded, validate=True)
+            if signed.status_code == 200:
+                result = signed.json()
+                signed_path = result.get("signedURL")
 
-                if len(image_data) > 10 * 1024 * 1024:
-                    self.send_json({"error": "Photo too large"}, 413)
-                    return
+                if signed_path:
+                    if signed_path.startswith("http"):
+                        data["photo_url"] = signed_path
+                    else:
+                        data["photo_url"] = (
+                            f"{SUPABASE_URL}/storage/v1"
+                            f"{signed_path}"
+                        )
 
-                filename = (
-                    "sharespace-"
-                    + datetime.now(IST).strftime("%Y%m%d-%H%M%S-%f")
-                    + "-"
-                    + uuid.uuid4().hex[:8]
-                    + ".jpg"
-                )
+        return jsonify({
+            "ok": True,
+            "data": data
+        })
 
-                filepath = os.path.join(UPLOAD_DIR, filename)
-
-                with open(filepath, "wb") as f:
-                    f.write(image_data)
-
-                # Remove reference to previous photo.
-                old_photo = shared.get("photo")
-
-                shared["photo"] = "/uploads/" + filename
-                shared["photo_time"] = now_ist()
-
-                save_data(shared)
-
-                # Delete old image only after new image is safely written.
-                if old_photo and old_photo.startswith("/uploads/"):
-                    old_path = os.path.join(
-                        UPLOAD_DIR,
-                        os.path.basename(old_photo)
-                    )
-
-                    if old_path != filepath and os.path.exists(old_path):
-                        try:
-                            os.remove(old_path)
-                        except OSError:
-                            pass
-
-                self.send_json({
-                    "ok": True,
-                    "photo": shared["photo"],
-                    "photo_time": shared["photo_time"]
-                })
-
-            except Exception:
-                self.send_json({"error": "Photo save failed"}, 500)
-
-            return
-
-        # Clear current session
-        if path == "/api/stop":
-            save_data({})
-            self.send_json({"ok": True})
-            return
-
-        self.send_json({"error": "Not found"}, 404)
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
 
 
-print("=" * 45)
-print("ShareSpace")
-print("Server running")
-print("Timezone: Asia/Kolkata")
-print("=" * 45)
+if __name__ == "__main__":
+    create_bucket()
 
-server = ThreadingHTTPServer((HOST, PORT), Handler)
-server.serve_forever()
+    port = int(os.environ.get("PORT", 10000))
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )

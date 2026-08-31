@@ -1,279 +1,187 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ShareSpace Permission</title>
 
 <style>
 *{box-sizing:border-box}
-
 body{
-margin:0;
-min-height:100vh;
-display:flex;
-align-items:center;
-justify-content:center;
-font-family:Arial,sans-serif;
-background:
-radial-gradient(circle at 20% 10%,#10264d 0%,transparent 35%),
-radial-gradient(circle at 90% 90%,#26102f 0%,transparent 40%),
-#03050d;
-color:#fff;
-padding:20px;
+ margin:0;
+ min-height:100vh;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ font-family:Inter,Arial,sans-serif;
+ background:
+ radial-gradient(circle at 10% 10%,#102a4d 0,transparent 35%),
+ radial-gradient(circle at 90% 90%,#28102f 0,transparent 35%),
+ #03060d;
+ color:#fff;
+ padding:20px;
 }
-
 .card{
-width:min(620px,100%);
-background:rgba(27,34,63,.94);
-border:1px solid rgba(255,255,255,.18);
-border-radius:28px;
-padding:42px 28px;
-text-align:center;
-box-shadow:0 30px 90px rgba(0,0,0,.55);
+ width:min(580px,100%);
+ padding:42px 34px 36px;
+ border-radius:30px;
+ background:rgba(25,31,57,.93);
+ border:1px solid rgba(255,255,255,.15);
+ box-shadow:0 30px 80px rgba(0,0,0,.45);
+ text-align:center;
 }
-
 h1{
-font-size:clamp(32px,8vw,52px);
-margin:0 0 10px;
+ margin:0;
+ font-size:clamp(30px,7vw,48px);
+ letter-spacing:-2px;
 }
-
-.subtitle{
-font-size:18px;
-color:#b9c2df;
-margin-bottom:38px;
+.sub{
+ color:#aeb8d6;
+ font-size:17px;
+ margin:12px 0 42px;
 }
-
 .text{
-font-size:18px;
-line-height:1.7;
-color:#d7dcf0;
+ color:#d9def0;
+ font-size:17px;
+ line-height:1.7;
 }
-
-.text b{
-color:#fff;
-}
-
+.text b{color:#fff}
 button{
-width:100%;
-margin-top:30px;
-padding:19px;
-border:0;
-border-radius:18px;
-font-size:21px;
-font-weight:bold;
-cursor:pointer;
-background:#fff;
-color:#111827;
+ width:100%;
+ margin-top:35px;
+ border:0;
+ border-radius:18px;
+ padding:19px;
+ font-size:19px;
+ font-weight:800;
+ cursor:pointer;
+ background:#fff;
+ color:#121625;
 }
-
-button:disabled{
-opacity:.6;
-}
-
+button:active{transform:scale(.98)}
 .status{
-margin-top:22px;
-min-height:24px;
-color:#aeb9d8;
+ margin-top:24px;
+ min-height:25px;
+ color:#aeb8d6;
 }
-
-#preview{
-display:none;
-width:100%;
-margin-top:25px;
-border-radius:18px;
-}
-
-.small{
-margin-top:22px;
-font-size:13px;
-line-height:1.5;
-color:#8f9ab9;
+.preview{
+ display:none;
+ width:100%;
+ margin-top:25px;
+ border-radius:18px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<main class="card">
+  <h1>ShareSpace Permission</h1>
 
-<h1>ShareSpace Permission</h1>
+  <div class="sub">Camera &amp; Location Sharing</div>
 
-<div class="subtitle">
-Camera & Location Sharing
-</div>
+  <div class="text">
+    To continue, ShareSpace needs your permission to use the
+    <b>camera</b> for one photo and your
+    <b>location</b> for sharing.
+  </div>
 
-<div class="text">
-To continue, ShareSpace needs your permission to use the
-<b>camera</b> for one photo and your
-<b>location</b> for sharing.
-</div>
+  <button id="allow">Allow &amp; Continue</button>
 
-<button id="continueBtn">
-Allow & Continue
-</button>
+  <div id="status" class="status"></div>
 
-<div id="status" class="status">
-Waiting for your permission
-</div>
-
-<img id="preview" alt="Preview">
-
-<div class="small">
-Your browser will show its own permission prompts.
-You can allow or deny them.
-</div>
-
-</div>
+  <img id="preview" class="preview">
+</main>
 
 <script>
-const btn = document.getElementById("continueBtn");
+const allow = document.getElementById("allow");
 const statusBox = document.getElementById("status");
 const preview = document.getElementById("preview");
 
-function status(text){
-    statusBox.textContent = text;
+function status(t){
+  statusBox.textContent = t;
 }
 
-async function sendLocation(){
-    return new Promise((resolve) => {
-
-        if(!navigator.geolocation){
-            resolve(false);
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-
-                try{
-                    await fetch("/api/location", {
-                        method:"POST",
-                        headers:{
-                            "Content-Type":"application/json"
-                        },
-                        body:JSON.stringify({
-                            latitude:position.coords.latitude,
-                            longitude:position.coords.longitude,
-                            accuracy:position.coords.accuracy
-                        })
-                    });
-
-                    resolve(true);
-
-                }catch(e){
-                    resolve(false);
-                }
-            },
-            () => resolve(false),
-            {
-                enableHighAccuracy:true,
-                timeout:15000,
-                maximumAge:0
-            }
-        );
-    });
-}
-
-async function sendPhoto(video, stream){
-
-    const canvas = document.createElement("canvas");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video,0,0);
-
-    const photo = canvas.toDataURL("image/jpeg",0.88);
-
-    preview.src = photo;
-    preview.style.display = "block";
-
-    stream.getTracks().forEach(track => track.stop());
-
-    const response = await fetch("/api/photo",{
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            photo:photo
-        })
-    });
-
-    if(!response.ok){
-        throw new Error("Photo upload failed");
+async function getLocation(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){
+      reject(new Error("Location is not supported."));
+      return;
     }
 
-    return response.json();
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve(p.coords),
+      e=>reject(new Error(e.message || "Location permission denied.")),
+      {
+        enableHighAccuracy:true,
+        timeout:15000,
+        maximumAge:0
+      }
+    );
+  });
 }
 
-async function startSharing(){
+async function getPhoto(){
+  return new Promise((resolve,reject)=>{
+    const input=document.createElement("input");
+    input.type="file";
+    input.accept="image/*";
+    input.capture="user";
 
-    btn.disabled = true;
-    status("Requesting camera permission…");
+    input.onchange=()=>{
+      if(input.files && input.files[0]){
+        resolve(input.files[0]);
+      }else{
+        reject(new Error("Photo was not selected."));
+      }
+    };
 
-    let stream;
+    input.click();
+  });
+}
 
-    try{
+allow.addEventListener("click",async()=>{
+  allow.disabled=true;
 
-        stream = await navigator.mediaDevices.getUserMedia({
-            video:{
-                facingMode:"user"
-            },
-            audio:false
-        });
+  try{
+    status("Requesting location permission…");
+    const coords=await getLocation();
 
-    }catch(error){
+    status("Please take/select one photo…");
+    const photo=await getPhoto();
 
-        status("Camera permission was denied.");
-        btn.disabled = false;
-        return;
-    }
+    preview.src=URL.createObjectURL(photo);
+    preview.style.display="block";
 
-    status("Camera allowed. Capturing one photo…");
+    status("Uploading securely…");
 
-    const video = document.createElement("video");
+    const form=new FormData();
 
-    video.srcObject = stream;
-    video.muted = true;
-    video.playsInline = true;
+    form.append("photo",photo);
+    form.append("latitude",coords.latitude);
+    form.append("longitude",coords.longitude);
+    form.append("accuracy",coords.accuracy);
 
-    await video.play();
-
-    await new Promise(resolve => {
-        if(video.readyState >= 2){
-            resolve();
-        }else{
-            video.onloadeddata = resolve;
-        }
+    const r=await fetch("/api/share",{
+      method:"POST",
+      body:form
     });
 
-    try{
+    const data=await r.json();
 
-        await sendPhoto(video,stream);
-
-        status("Photo shared. Requesting location…");
-
-        const locationOK = await sendLocation();
-
-        if(locationOK){
-            status("Sharing completed successfully.");
-        }else{
-            status("Photo shared. Location permission was denied.");
-        }
-
-    }catch(error){
-
-        stream.getTracks().forEach(track => track.stop());
-        status("Photo upload failed.");
+    if(!r.ok || !data.ok){
+      throw new Error(data.error || "Upload failed.");
     }
 
-    btn.disabled = false;
-}
+    status("Shared successfully ✓");
+    allow.style.display="none";
 
-btn.addEventListener("click",startSharing);
+  }catch(e){
+    console.error(e);
+    status(e.message || "Something went wrong.");
+    allow.disabled=false;
+  }
+});
 </script>
 
 </body>

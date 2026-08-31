@@ -1,256 +1,189 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ShareSpace Dashboard</title>
 
 <style>
 *{box-sizing:border-box}
-
 body{
-margin:0;
-min-height:100vh;
-font-family:Arial,sans-serif;
-background:
-radial-gradient(circle at top left,#10264d,transparent 40%),
-radial-gradient(circle at bottom right,#26102f,transparent 40%),
-#03050d;
-color:#fff;
-padding:28px 16px;
+ margin:0;
+ min-height:100vh;
+ font-family:Inter,Arial,sans-serif;
+ color:#fff;
+ background:
+ radial-gradient(circle at 0 0,#10284b,transparent 35%),
+ radial-gradient(circle at 100% 100%,#2a102e,transparent 40%),
+ #03060d;
+ padding:24px 14px;
 }
-
+.header{
+ text-align:center;
+ margin-bottom:20px;
+}
+.logo{
+ font-size:28px;
+ font-weight:900;
+}
+.muted{color:#aab4d0}
 .container{
-max-width:760px;
-margin:auto;
+ max-width:700px;
+ margin:auto;
 }
-
-header{
-text-align:center;
-margin-bottom:28px;
-}
-
-h1{
-font-size:42px;
-margin:0 0 8px;
-}
-
-.sub{
-color:#aeb8d3;
-}
-
 .card{
-background:rgba(27,30,50,.94);
-border:1px solid rgba(255,255,255,.14);
-border-radius:25px;
-padding:25px;
-box-shadow:0 25px 70px rgba(0,0,0,.45);
+ background:rgba(25,31,57,.94);
+ border:1px solid rgba(255,255,255,.13);
+ border-radius:26px;
+ padding:22px;
+ box-shadow:0 25px 70px rgba(0,0,0,.4);
 }
-
+.top{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+}
 .online{
-display:inline-block;
-padding:8px 14px;
-border-radius:30px;
-background:#063b2a;
-color:#20e79a;
-font-size:14px;
+ padding:8px 12px;
+ border-radius:20px;
+ background:#063d2d;
+ color:#69f3bb;
+ font-size:12px;
 }
-
-h2{
-font-size:23px;
-margin-top:28px;
+h2{margin:0}
+h3{margin-top:30px}
+.photo{
+ width:100%;
+ max-height:650px;
+ object-fit:contain;
+ border-radius:18px;
+ background:#050811;
 }
-
-img{
-display:block;
-width:100%;
-max-height:650px;
-object-fit:contain;
-background:#05060d;
-border-radius:18px;
-margin-top:15px;
-}
-
-.photo-time{
-color:#8994b3;
-font-size:13px;
-margin-top:9px;
-}
-
 .info{
-background:rgba(70,78,110,.25);
-padding:16px;
-border-radius:15px;
-line-height:1.8;
-color:#dce1ef;
+ margin-top:16px;
+ background:rgba(255,255,255,.05);
+ padding:16px;
+ border-radius:15px;
+ line-height:1.8;
+ color:#dce2f2;
 }
-
-.map,.back{
-display:block;
-text-align:center;
-margin-top:16px;
-padding:15px;
-border-radius:14px;
-background:#fff;
-color:#111;
-font-weight:bold;
-text-decoration:none;
+.map{
+ display:block;
+ margin-top:16px;
+ text-decoration:none;
+ text-align:center;
+ padding:15px;
+ border-radius:15px;
+ background:#fff;
+ color:#111827;
+ font-weight:800;
 }
-
-.empty{
-text-align:center;
-padding:50px 10px;
-color:#9da7c0;
-}
-
-.updated{
-margin-top:20px;
-text-align:center;
-font-size:12px;
-color:#707b98;
+.time{
+ margin-top:16px;
+ font-size:13px;
+ color:#9faac8;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<header>
-<h1>ShareSpace</h1>
-<div class="sub">Consent-Based Sharing Dashboard</div>
-</header>
-
-<div class="card">
-
-<div class="online">● Server Online</div>
-
-<div id="content">
-<div class="empty">Loading shared session…</div>
+<div class="header">
+  <div class="logo">ShareSpace</div>
+  <div class="muted">Consent-Based Sharing Dashboard</div>
 </div>
 
-<div id="updated" class="updated"></div>
+<div class="container">
+<div class="card">
 
-<a class="back" href="/">
-← Back to ShareSpace
-</a>
+<div class="top">
+  <h2>Dashboard</h2>
+  <div class="online">● Server Online</div>
+</div>
+
+<h3>Shared Photo</h3>
+
+<div id="photoBox">
+  <div class="muted">Loading…</div>
+</div>
+
+<h3>Live Location</h3>
+
+<div id="locationBox" class="info">
+  Loading…
+</div>
+
+<div id="mapBox"></div>
+
+<div id="updated" class="time"></div>
 
 </div>
 </div>
 
 <script>
+async function load(){
+  try{
+    const r=await fetch("/api/latest?cb="+Date.now(),{
+      cache:"no-store"
+    });
 
-const content = document.getElementById("content");
-const updated = document.getElementById("updated");
+    const result=await r.json();
 
-let lastPhoto = "";
+    if(!result.ok || !result.data){
+      document.getElementById("photoBox").innerHTML=
+        '<div class="muted">No shared data yet.</div>';
 
-async function loadDashboard(){
+      document.getElementById("locationBox").textContent=
+        "No location available.";
 
-    try{
-
-        const response = await fetch(
-            "/api/latest?cb=" + Date.now(),
-            {
-                cache:"no-store"
-            }
-        );
-
-        const data = await response.json();
-
-        if(!data.photo && !data.latitude){
-
-            content.innerHTML = `
-                <div class="empty">
-                    No shared session available yet.
-                </div>
-            `;
-
-            updated.textContent = "";
-            lastPhoto = "";
-            return;
-        }
-
-        let html = "";
-
-        if(data.photo){
-
-            const photoURL =
-                data.photo +
-                "?v=" +
-                encodeURIComponent(data.photo_time || Date.now());
-
-            html += `
-                <h2>Shared Photo</h2>
-
-                <img
-                    src="${photoURL}"
-                    alt="Shared photo"
-                >
-
-                <div class="photo-time">
-                    Photo updated: ${data.photo_time || "Unknown"}
-                </div>
-            `;
-
-            lastPhoto = data.photo;
-        }
-
-        if(
-            data.latitude !== undefined &&
-            data.longitude !== undefined
-        ){
-
-            const lat = Number(data.latitude).toFixed(6);
-            const lon = Number(data.longitude).toFixed(6);
-
-            html += `
-                <h2>Live Location</h2>
-
-                <div class="info">
-                    Latitude: ${lat}<br>
-                    Longitude: ${lon}<br>
-                    Accuracy:
-                    ${
-                        data.accuracy
-                        ? Math.round(data.accuracy)+" meters"
-                        : "Unknown"
-                    }<br>
-                    Updated:
-                    ${data.location_time || "Unknown"}
-                </div>
-
-                <a
-                    class="map"
-                    target="_blank"
-                    rel="noopener"
-                    href="https://www.google.com/maps?q=${encodeURIComponent(data.latitude)},${encodeURIComponent(data.longitude)}"
-                >
-                    📍 Open Location in Google Maps
-                </a>
-            `;
-        }
-
-        content.innerHTML = html;
-
-        updated.textContent =
-            "Dashboard refreshed: " +
-            new Date().toLocaleTimeString("en-IN");
-
-    }catch(error){
-
-        content.innerHTML = `
-            <div class="empty">
-                Unable to load dashboard data.
-            </div>
-        `;
+      return;
     }
+
+    const d=result.data;
+
+    if(d.photo_url){
+      document.getElementById("photoBox").innerHTML=
+        `<img class="photo" src="${d.photo_url}" alt="Shared photo">`;
+    }else{
+      document.getElementById("photoBox").innerHTML=
+        '<div class="muted">No photo available.</div>';
+    }
+
+    const lat=d.latitude;
+    const lon=d.longitude;
+
+    document.getElementById("locationBox").innerHTML=
+      `Latitude: ${lat ?? "Unknown"}<br>
+       Longitude: ${lon ?? "Unknown"}<br>
+       Accuracy: ${d.accuracy ? Math.round(d.accuracy)+" meters" : "Unknown"}`;
+
+    if(lat != null && lon != null){
+      document.getElementById("mapBox").innerHTML=
+        `<a class="map"
+        target="_blank"
+        rel="noopener"
+        href="https://www.google.com/maps?q=${encodeURIComponent(lat)},${encodeURIComponent(lon)}">
+        📍 Open Location in Google Maps
+        </a>`;
+    }
+
+    document.getElementById("updated").textContent=
+      "Updated (IST): "+(d.created_at || "Unknown");
+
+  }catch(e){
+    console.error(e);
+
+    document.getElementById("photoBox").innerHTML=
+      '<div class="muted">Unable to load dashboard.</div>';
+
+    document.getElementById("locationBox").textContent=
+      "Server error.";
+  }
 }
 
-loadDashboard();
-
-setInterval(loadDashboard,5000);
-
+load();
+setInterval(load,10000);
 </script>
 
 </body>

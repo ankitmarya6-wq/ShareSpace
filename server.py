@@ -31,31 +31,51 @@ def headers():
 
 
 def create_bucket():
+    """Ensure the configured Supabase Storage bucket exists."""
     if not SUPABASE_URL or not SUPABASE_KEY:
+        print("Supabase environment variables are missing; skipping bucket check.")
         return
 
-    url = f"{SUPABASE_URL}/storage/v1/bucket"
-    payload = {
-        "id": BUCKET,
-        "name": BUCKET,
-        "public": False,
-        "file_size_limit": 10485760,
-    }
+    bucket_url = f"{SUPABASE_URL}/storage/v1/bucket/{BUCKET}"
+    create_url = f"{SUPABASE_URL}/storage/v1/bucket"
 
     try:
+        # Check first: the bucket may already exist.
+        check = requests.get(
+            bucket_url,
+            headers=headers(),
+            timeout=15,
+        )
+
+        if check.status_code == 200:
+            print(f"Supabase bucket '{BUCKET}' already exists.")
+            return
+
+        payload = {
+            "id": BUCKET,
+            "name": BUCKET,
+            "public": False,
+            "file_size_limit": 10485760,
+        }
+
         r = requests.post(
-            url,
+            create_url,
             headers={**headers(), "Content-Type": "application/json"},
             json=payload,
             timeout=15,
         )
 
         if r.status_code in (200, 201):
-            print("Supabase bucket ready.")
-        elif r.status_code == 409:
-            print("Supabase bucket already exists.")
+            print(f"Supabase bucket '{BUCKET}' created successfully.")
+        elif r.status_code in (400, 409):
+            body = r.text.lower()
+            if "already" in body or "duplicate" in body or "exists" in body:
+                print(f"Supabase bucket '{BUCKET}' already exists.")
+            else:
+                print("Bucket response:", r.status_code, r.text[:300])
         else:
             print("Bucket response:", r.status_code, r.text[:300])
+
     except Exception as e:
         print("Bucket check failed:", e)
 
@@ -265,3 +285,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port
     )
+    

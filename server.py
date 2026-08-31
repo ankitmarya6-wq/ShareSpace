@@ -1,288 +1,236 @@
 import os
 import uuid
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-import requests
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify, send_from_directory
+import requests
 
 app = Flask(__name__)
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 BUCKET = os.environ.get("SUPABASE_BUCKET", "sharespace")
+ADMIN_PASSWORD = os.environ.get("SHARESPACE_PASSWORD", "ChangeThisPassword")
 
-IST = ZoneInfo("Asia/Kolkata")
-
-
-def now_ist():
-    return datetime.now(IST).isoformat(timespec="seconds")
-
-
-def headers():
+def sb_headers():
     return {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
     }
 
-
-def create_bucket():
-    """Ensure the configured Supabase Storage bucket exists."""
+def require_sb():
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print("Supabase environment variables are missing; skipping bucket check.")
-        return
+        return False, ("Supabase environment variables are missing.", 500)
+    return True, None
 
-    bucket_url = f"{SUPABASE_URL}/storage/v1/bucket/{BUCKET}"
-    create_url = f"{SUPABASE_URL}/storage/v1/bucket"
-
-    try:
-        # Check first: the bucket may already exist.
-        check = requests.get(
-            bucket_url,
-            headers=headers(),
-            timeout=15,
-        )
-
-        if check.status_code == 200:
-            print(f"Supabase bucket '{BUCKET}' already exists.")
-            return
-
-        payload = {
-            "id": BUCKET,
-            "name": BUCKET,
-            "public": False,
-            "file_size_limit": 10485760,
-        }
-
-        r = requests.post(
-            create_url,
-            headers={**headers(), "Content-Type": "application/json"},
-            json=payload,
-            timeout=15,
-        )
-
-        if r.status_code in (200, 201):
-            print(f"Supabase bucket '{BUCKET}' created successfully.")
-        elif r.status_code in (400, 409):
-            body = r.text.lower()
-            if "already" in body or "duplicate" in body or "exists" in body:
-                print(f"Supabase bucket '{BUCKET}' already exists.")
-            else:
-                print("Bucket response:", r.status_code, r.text[:300])
-        else:
-            print("Bucket response:", r.status_code, r.text[:300])
-
-    except Exception as e:
-        print("Bucket check failed:", e)
-
-
-@app.route("/")
-def index():
+@app.get("/")
+def home():
     return send_from_directory(BASE_DIR, "index.html")
 
+@app.get("/share/<share_id>")
+def share_page(share_id):
+    return send_from_directory(BASE_DIR, "index.html")
 
-@app.route("/dashboard")
+@app.get("/dashboard")
 def dashboard():
-    return send_from_directory(BASE_DIR, "dashboard.html")
+    return send_from_directory(BASE_DIR, "index.html")
 
-
-@app.route("/api/health")
-def health():
-    return jsonify({
-        "ok": True,
-        "service": "ShareSpace",
-        "time_ist": now_ist()
-    })
-
-
-@app.route("/api/share", methods=["POST"])
-def share():
-    """
-    Receives photo + location only after the browser has obtained
-    the user's explicit permission.
-    """
-
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        return jsonify({
-            "ok": False,
-            "error": "Supabase environment variables are missing."
-        }), 500
+@app.post("/api/share/<share_id>")
+def save_share(share_id):
+    ok, error = require_sb()
+    if not ok:
+        return jsonify(ok=False, error=error[0]), error[1]
 
     photo = request.files.get("photo")
-
-    latitude = request.form.get("latitude")
-    longitude = request.form.get("longitude")
-    accuracy = request.form.get("accuracy")
-
-    if not photo:
-        return jsonify({
-            "ok": False,
-            "error": "No photo received."
-        }), 400
-
-    ext = os.path.splitext(photo.filename or "")[1].lower()
-
-    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-        ext = ".jpg"
-
-    filename = f"{uuid.uuid4().hex}{ext}"
-    path = f"photos/{filename}"
-
-    content_type = photo.mimetype or "image/jpeg"
-    file_bytes = photo.read()
-
-    upload_url = (
-        f"{SUPABASE_URL}/storage/v1/object/"
-        f"{BUCKET}/{path}"
-    )
+    if not photo or not (photo.mimetype or "").startswith("image/"):
+        return jsonify(ok=False, error="Image missing"), 400
 
     try:
-        upload = requests.post(
-            upload_url,
-            headers={
-                **headers(),
-                "Content-Type": content_type,
-                "x-upsert": "true",
-            },
-            data=file_bytes,
-            timeout=60,
-        )
+        lat = float(request.form["latitude"])
+        lng = float(request.form["longitude"])
+        accuracy = float(request.form.get("accuracy", "0"))
+    except (KeyError, TypeError, ValueError):
+        return jsonify(ok=False, error="Location missing or invalid"), 400
 
-        if upload.status_code not in (200, 201):
-            return jsonify({
-                "ok": False,
-                "error": "Supabase photo upload failed",
-                "details": upload.text[:500]
-            }), 502
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify(ok=False, error="Invalid coordinates"), 400
 
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e)
-        }), 502
+    data = photo.read()
+    if not data or len(data) > 8 * 1024 * 1024:
+        return jsonify(ok=False, error="Invalid or oversized image"), 413
 
-    created = now_ist()
+    ext = ".jpg"
+    if photo.mimetype == "image/png":
+        ext = ".png"
+    elif photo.mimetype == "image/webp":
+        ext = ".webp"
 
-    # Store metadata in Supabase database.
+    path = f"photos/{uuid.uuid4().hex}{ext}"
+
+    upload = requests.post(
+        f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{path}",
+        headers={**sb_headers(), "Content-Type": photo.mimetype or "image/jpeg", "x-upsert": "false"},
+        data=data,
+        timeout=60,
+    )
+    if upload.status_code not in (200, 201):
+        return jsonify(ok=False, error="Photo upload failed", details=upload.text[:500]), 502
+
+    now = datetime.now(timezone.utc).isoformat()
+
     row = {
+        "share_id": share_id,
         "photo_path": path,
-        "latitude": float(latitude) if latitude else None,
-        "longitude": float(longitude) if longitude else None,
-        "accuracy": float(accuracy) if accuracy else None,
-        "created_at": created,
+        "latitude": lat,
+        "longitude": lng,
+        "accuracy": accuracy,
+        "active": True,
+        "updated_at": now,
+        "created_at": now,
     }
 
-    try:
-        db = requests.post(
-            f"{SUPABASE_URL}/rest/v1/sharespace_shares",
-            headers={
-                **headers(),
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal",
-            },
-            json=row,
+    db = requests.post(
+        f"{SUPABASE_URL}/rest/v1/sharespace_shares",
+        headers={**sb_headers(), "Content-Type": "application/json", "Prefer": "return=minimal"},
+        json=row,
+        timeout=20,
+    )
+
+    if db.status_code not in (200, 201):
+        # Avoid leaving an orphan photo when the DB insert fails.
+        requests.delete(
+            f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{path}",
+            headers=sb_headers(),
             timeout=20,
         )
+        return jsonify(ok=False, error="Database insert failed", details=db.text[:500]), 502
 
-        if db.status_code not in (200, 201):
-            return jsonify({
-                "ok": False,
-                "error": "Database insert failed",
-                "details": db.text[:500]
-            }), 502
+    return jsonify(ok=True, message="Photo and location saved")
 
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e)
-        }), 502
+@app.post("/api/location/<share_id>")
+def update_location(share_id):
+    ok, error = require_sb()
+    if not ok:
+        return jsonify(ok=False, error=error[0]), error[1]
 
-    return jsonify({
-        "ok": True,
-        "message": "Shared successfully",
-        "photo_path": path,
-        "time_ist": created
-    })
-
-
-@app.route("/api/latest")
-def latest():
+    data = request.get_json(silent=True) or {}
     try:
-        r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/sharespace_shares"
-            "?select=*"
-            "&order=id.desc"
-            "&limit=1",
-            headers=headers(),
+        lat = float(data["latitude"])
+        lng = float(data["longitude"])
+        accuracy = float(data.get("accuracy", 0))
+    except (KeyError, TypeError, ValueError):
+        return jsonify(ok=False, error="Invalid location"), 400
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify(ok=False, error="Invalid coordinates"), 400
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    r = requests.patch(
+        f"{SUPABASE_URL}/rest/v1/sharespace_shares?share_id=eq.{share_id}",
+        headers={**sb_headers(), "Content-Type": "application/json", "Prefer": "return=minimal"},
+        json={
+            "latitude": lat,
+            "longitude": lng,
+            "accuracy": accuracy,
+            "updated_at": now,
+            "active": True,
+        },
+        timeout=20,
+    )
+    if r.status_code not in (200, 204):
+        return jsonify(ok=False, error="Location update failed", details=r.text[:500]), 502
+
+    return jsonify(ok=True)
+
+@app.post("/api/stop/<share_id>")
+def stop_share(share_id):
+    ok, error = require_sb()
+    if not ok:
+        return jsonify(ok=False, error=error[0]), error[1]
+
+    r = requests.patch(
+        f"{SUPABASE_URL}/rest/v1/sharespace_shares?share_id=eq.{share_id}",
+        headers={**sb_headers(), "Content-Type": "application/json", "Prefer": "return=minimal"},
+        json={"active": False},
+        timeout=20,
+    )
+    if r.status_code not in (200, 204):
+        return jsonify(ok=False, error="Stop failed"), 502
+    return jsonify(ok=True)
+
+@app.get("/api/share/<share_id>")
+def get_share(share_id):
+    ok, error = require_sb()
+    if not ok:
+        return jsonify(ok=False, error=error[0]), error[1]
+
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/sharespace_shares?share_id=eq.{share_id}&select=*",
+        headers=sb_headers(),
+        timeout=20,
+    )
+    if r.status_code != 200:
+        return jsonify(ok=False, error="Database read failed", details=r.text[:500]), 502
+
+    rows = r.json()
+    if not rows:
+        return jsonify(ok=False, error="Share not found"), 404
+
+    x = rows[0]
+    photo_url = None
+    if x.get("photo_path"):
+        signed = requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/sign/{BUCKET}/{x['photo_path']}",
+            headers={**sb_headers(), "Content-Type": "application/json"},
+            json={"expiresIn": 3600},
             timeout=20,
         )
+        if signed.status_code in (200, 201):
+            token = signed.json().get("signedURL") or signed.json().get("signedUrl")
+            if token:
+                photo_url = token if token.startswith("http") else f"{SUPABASE_URL}/storage/v1{token}"
 
-        if r.status_code != 200:
-            return jsonify({
-                "ok": False,
-                "error": r.text[:500]
-            }), 502
+    return jsonify(ok=True, item={**x, "photo_url": photo_url})
 
-        rows = r.json()
+@app.get("/api/dashboard")
+def dashboard_data():
+    if request.headers.get("X-Admin-Password", "") != ADMIN_PASSWORD:
+        return jsonify(ok=False, error="Unauthorized"), 401
 
-        if not rows:
-            return jsonify({
-                "ok": True,
-                "data": None
-            })
+    ok, error = require_sb()
+    if not ok:
+        return jsonify(ok=False, error=error[0]), error[1]
 
-        data = rows[0]
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/sharespace_shares?select=*&order=created_at.desc&limit=100",
+        headers=sb_headers(),
+        timeout=20,
+    )
+    if r.status_code != 200:
+        return jsonify(ok=False, error="Database read failed", details=r.text[:500]), 502
 
-        photo_path = data.get("photo_path")
-
-        if photo_path:
+    items = r.json()
+    for x in items:
+        x["photo_url"] = None
+        if x.get("photo_path"):
             signed = requests.post(
-                f"{SUPABASE_URL}/storage/v1/object/sign/"
-                f"{BUCKET}/{photo_path}",
-                headers={
-                    **headers(),
-                    "Content-Type": "application/json",
-                },
+                f"{SUPABASE_URL}/storage/v1/object/sign/{BUCKET}/{x['photo_path']}",
+                headers={**sb_headers(), "Content-Type": "application/json"},
                 json={"expiresIn": 3600},
                 timeout=20,
             )
+            if signed.status_code in (200, 201):
+                token = signed.json().get("signedURL") or signed.json().get("signedUrl")
+                if token:
+                    x["photo_url"] = token if token.startswith("http") else f"{SUPABASE_URL}/storage/v1{token}"
 
-            if signed.status_code == 200:
-                result = signed.json()
-                signed_path = result.get("signedURL")
+    return jsonify(ok=True, items=items)
 
-                if signed_path:
-                    if signed_path.startswith("http"):
-                        data["photo_url"] = signed_path
-                    else:
-                        data["photo_url"] = (
-                            f"{SUPABASE_URL}/storage/v1"
-                            f"{signed_path}"
-                        )
-
-        return jsonify({
-            "ok": True,
-            "data": data
-        })
-
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e)
-        }), 500
-
+@app.get("/api/health")
+def health():
+    return jsonify(ok=True, service="ShareSpace")
 
 if __name__ == "__main__":
-    create_bucket()
-
-    port = int(os.environ.get("PORT", 10000))
-
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "10000")))
     
